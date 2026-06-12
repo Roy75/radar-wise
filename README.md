@@ -5,7 +5,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/TheWillMiller/weather-wise?label=stars)](https://github.com/TheWillMiller/weather-wise/stargazers)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-yellow?logo=buymeacoffee)](https://buymeacoffee.com/thewillmiller)
 
-**Latest beta:** `v0.2.0-beta.11`
+**Latest release:** `v0.3.0`
 
 WeatherWise is a Home Assistant dashboard (Lovelace) custom card for current weather, hourly and daily forecasts, sunrise and sunset, wind, humidity, and optional radar. It follows the TideWise/RiverWise visual language while staying a dashboard card, not a backend integration.
 
@@ -13,7 +13,7 @@ WeatherWise is a Home Assistant dashboard (Lovelace) custom card for current wea
 
 ![WeatherWise visual editor](https://raw.githubusercontent.com/TheWillMiller/weather-wise/main/docs/visual-editor.png)
 
-> **Beta notice:** WeatherWise is early beta software. Please expect occasional layout issues, provider-specific quirks, and missing-data fallbacks while testing.
+> **Public release note:** WeatherWise is ready for regular use, but weather providers vary by region. Please report provider-specific layout, radar, or forecast quirks so support can keep improving.
 
 ## Region Support
 
@@ -36,7 +36,7 @@ Canada currently uses RainViewer for radar. Native Environment Canada radar is n
 
 WeatherWise should still render current conditions and forecasts anywhere Home Assistant has a working `weather` entity. Outside the initial US, Canada, and UK presets, radar falls back to RainViewer and local alert/warning overlays may be limited or unavailable.
 
-If you are testing from Australia, New Zealand, Europe, or any other region, please open a beta report or feature request with:
+If you are testing from Australia, New Zealand, Europe, or any other region, please open a report or feature request with:
 
 - Country/region and nearest city or general area
 - Home Assistant weather integration/provider
@@ -119,7 +119,7 @@ type: module
 For quick testing before installing locally, you can add this dashboard resource:
 
 ```yaml
-url: https://cdn.jsdelivr.net/gh/TheWillMiller/weather-wise@v0.2.0-beta.11/weatherwise-card.js
+url: https://cdn.jsdelivr.net/gh/TheWillMiller/weather-wise@v0.3.0/weatherwise-card.js
 type: module
 ```
 

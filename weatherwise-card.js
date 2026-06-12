@@ -3,7 +3,7 @@
  * Home Assistant weather dashboard card with forecasts and optional radar.
  */
 
-const CARD_VERSION = "0.2.0-beta.11";
+const CARD_VERSION = "0.3.0";
 const FORECAST_REFRESH_MS = 15 * 60 * 1000;
 const CARD_TYPES = ["weatherwise-card", "weather-wise-card"];
 
@@ -1371,7 +1371,7 @@ class WeatherWiseDashedCard extends WeatherWiseCard {}
 class WeatherWiseDashedCardEditor extends WeatherWiseCardEditor {}
 
 if (!customElements.get(CARD_TYPES[0])) customElements.define(CARD_TYPES[0], WeatherWiseCard);
-// Keep the dashed element names as YAML-only legacy aliases for early WeatherWise beta users.
+// Keep the dashed element names as YAML-only legacy aliases for early WeatherWise users.
 if (!customElements.get(CARD_TYPES[1])) customElements.define(CARD_TYPES[1], WeatherWiseDashedCard);
 if (!customElements.get("weatherwise-card-editor")) customElements.define("weatherwise-card-editor", WeatherWiseCardEditor);
 if (!customElements.get("weather-wise-card-editor")) customElements.define("weather-wise-card-editor", WeatherWiseDashedCardEditor);

@@ -8,7 +8,7 @@ It supports United States, Canada, United Kingdom, and global/other dashboard se
 
 If you are testing from Australia, New Zealand, Europe, or another region, please report which Home Assistant weather provider you use, whether hourly/daily forecasts appear, whether RainViewer radar loads, and any local radar or warning source WeatherWise should support.
 
-WeatherWise is early beta software.
+WeatherWise is a public release. Weather provider behavior varies by region, so please report provider-specific layout, radar, or forecast quirks.
 
 ## Support
 

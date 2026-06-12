@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+
+### Changed
+
+- Promoted WeatherWise from beta-tagged releases to a clean public release version.
+- Updated documentation, install examples, issue templates, and HACS notes to use `v0.3.0`.
+- Replaced active beta wording with public-release support language.
+
+### Notes
+
+- Existing `v0.2.0-beta.*` releases remain in the changelog for history.
+- WeatherWise still welcomes provider and region reports, especially for non-US radar and forecast behavior.
+
 ## 0.2.0-beta.11
 
 ### Changed
@@ -175,6 +188,6 @@
 
 ### Known Issues
 
-- WeatherWise is early beta software.
+- WeatherWise provider behavior may vary by region and Home Assistant weather integration.
 - Canada and UK weather support depends on the user's Home Assistant weather entity.
 - RainViewer is a no-key global radar option for personal/community use and may have service/coverage limits.

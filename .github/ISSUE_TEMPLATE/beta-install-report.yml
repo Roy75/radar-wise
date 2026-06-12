@@ -1,15 +1,14 @@
-name: Beta Install Report
-description: Report a WeatherWise beta install, update, or runtime problem.
-title: "[Beta Install]: "
+name: Install / Runtime Report
+description: Report a WeatherWise install, update, or runtime problem.
+title: "[Install]: "
 labels:
-  - beta
   - install-report
 body:
   - type: input
     id: weatherwise_version
     attributes:
       label: WeatherWise version
-      placeholder: v0.2.0-beta.11
+      placeholder: v0.3.0
     validations:
       required: true
   - type: input

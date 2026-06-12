@@ -1,10 +1,10 @@
-# WeatherWise Beta Tester Checklist
+# WeatherWise Tester Checklist
 
 Please report:
 
 - Home Assistant version
 - HACS version
-- WeatherWise version, such as `v0.2.0-beta.11`
+- WeatherWise version, such as `v0.3.0`
 - Browser/device
 - Weather entity used
 - Country/radar provider
