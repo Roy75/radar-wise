@@ -10,6 +10,8 @@ WeatherWise is a Home Assistant dashboard (Lovelace) custom card for current wea
 
 ![WeatherWise dashboard preview](https://raw.githubusercontent.com/TheWillMiller/weather-wise/main/docs/preview.png)
 
+![WeatherWise visual editor](https://raw.githubusercontent.com/TheWillMiller/weather-wise/main/docs/visual-editor.png)
+
 > **Beta notice:** WeatherWise is early beta software. Please expect occasional layout issues, provider-specific quirks, and missing-data fallbacks while testing.
 
 ## Region Support
