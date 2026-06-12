@@ -3,7 +3,7 @@
  * Home Assistant weather dashboard card with forecasts and optional radar.
  */
 
-const CARD_VERSION = "0.2.0-beta.8";
+const CARD_VERSION = "0.2.0-beta.9";
 const FORECAST_REFRESH_MS = 15 * 60 * 1000;
 const CARD_TYPES = ["weatherwise-card", "weather-wise-card"];
 
@@ -1054,11 +1054,17 @@ class WeatherWiseCardEditor extends HTMLElement {
     this.attachShadow({ mode: "open" });
     this._config = {};
     this._hass = null;
+    this._rendered = false;
+    this._entitySignature = "";
   }
 
   set hass(hass) {
     this._hass = hass;
-    this._render();
+    const signature = this._editorEntitySignature();
+    if (!this._rendered || signature !== this._entitySignature) {
+      this._entitySignature = signature;
+      this._render();
+    }
   }
 
   setConfig(config) {
@@ -1079,6 +1085,15 @@ class WeatherWiseCardEditor extends HTMLElement {
       .sort(([a], [b]) => a.localeCompare(b));
   }
 
+  _editorEntitySignature() {
+    const states = this._hass?.states || {};
+    return Object.entries(states)
+      .filter(([entityId, state]) => entityId.startsWith("weather.") || isWeatherWiseHumidityEntity(entityId, state))
+      .map(([entityId, state]) => `${entityId}:${state.attributes?.friendly_name || ""}:${state.attributes?.device_class || ""}`)
+      .sort()
+      .join("|");
+  }
+
   _setValue(key, value) {
     const numberKeys = ["latitude", "longitude", "hourly_count", "radar_zoom", "radar_speed"];
     const booleanKeys = ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay", "show_animations"];
@@ -1096,6 +1111,7 @@ class WeatherWiseCardEditor extends HTMLElement {
 
   _render() {
     if (!this.shadowRoot) return;
+    this._rendered = true;
     const config = this._config || {};
     const entities = this._weatherEntities();
     const sensors = this._sensorEntities();

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0-beta.9
+
+### Fixed
+
+- Fixed Home Assistant visual editor dropdowns closing immediately in Chrome by avoiding unnecessary editor re-renders while entity data is unchanged.
+
 ## 0.2.0-beta.8
 
 ### Added
