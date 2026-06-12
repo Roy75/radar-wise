@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.0-beta.3
+
+### Fixed
+
+- Fixed auto-height dashboards growing the WeatherWise card far beyond the intended height.
+- Added explicit grid sizing defaults for Home Assistant section dashboards.
+- Reworked card height so the desktop/tablet layout is bounded while narrow/mobile cards can still stack naturally.
+- Removed large Leaflet map minimum heights that could inflate dashboard layout.
+- Delayed radar initialization until the map container has a real rendered size.
+- Added additional Leaflet size invalidation passes so radar tiles stay visible after Home Assistant layout changes.
+
 ## 0.1.0-beta.2
 
 ### Fixed

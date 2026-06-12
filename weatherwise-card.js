@@ -3,7 +3,7 @@
  * Home Assistant weather dashboard card with forecasts and optional radar.
  */
 
-const CARD_VERSION = "0.1.0-beta.2";
+const CARD_VERSION = "0.1.0-beta.3";
 const CARD_TYPES = ["weatherwise-card", "weather-wise-card"];
 
 const WEATHERWISE_COUNTRIES = {
@@ -117,6 +117,15 @@ class WeatherWiseCard extends HTMLElement {
 
   getCardSize() {
     return this._config.show_radar === false ? 5 : 8;
+  }
+
+  getGridOptions() {
+    return {
+      rows: 5,
+      columns: 18,
+      min_rows: 4,
+      min_columns: 8
+    };
   }
 
   _normalizeConfig(config) {
@@ -280,9 +289,20 @@ class WeatherWiseCard extends HTMLElement {
     if (this._config.show_radar && provider !== "none") {
       this._teardownRadar();
       this._radarProviderRendered = provider;
-      window.requestAnimationFrame(() => this._initRadar(provider));
+      window.requestAnimationFrame(() => this._scheduleRadarInit(provider));
     }
     this._updateClock();
+  }
+
+  _scheduleRadarInit(provider) {
+    const holder = this.shadowRoot?.getElementById("rmap");
+    if (!holder) return;
+    const rect = holder.getBoundingClientRect();
+    if (rect.width < 50 || rect.height < 50) {
+      window.setTimeout(() => this._scheduleRadarInit(provider), 250);
+      return;
+    }
+    this._initRadar(provider);
   }
 
   _renderDebug(data) {
@@ -389,7 +409,9 @@ class WeatherWiseCard extends HTMLElement {
       fillOpacity: 1,
       weight: 2
     }).addTo(this._radarMap);
+    this._radarMap.invalidateSize();
     window.setTimeout(() => this._radarMap?.invalidateSize(), 250);
+    window.setTimeout(() => this._radarMap?.invalidateSize(), 1000);
     await this._loadRadarLoop(provider);
     this._radarMap.on("moveend zoomend", () => {
       window.clearTimeout(this._radarReloadTimer);
@@ -652,9 +674,9 @@ class WeatherWiseCard extends HTMLElement {
       .card-outer{container-type:inline-size;background:linear-gradient(135deg,rgba(255,255,255,0.70),rgba(222,244,248,0.58));backdrop-filter:blur(12px) saturate(1.08);-webkit-backdrop-filter:blur(12px) saturate(1.08);border-radius:22px;border:1px solid rgba(255,255,255,0.40);box-shadow:0 5px 24px rgba(10,50,70,0.14);position:relative;overflow:hidden}
       :host([theme-mode="auto"]) .card-outer{background:linear-gradient(135deg,color-mix(in srgb,var(--card-background-color,#fff) 88%,transparent),color-mix(in srgb,var(--primary-color,#2a7a94) 14%,var(--card-background-color,#fff)))}
       .card-outer::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ww-wave) 62%,transparent),transparent)}
-      .card-grid{display:grid;grid-template-columns:minmax(0,24%) minmax(0,1fr) minmax(0,33%);min-height:620px}
+      .card-grid{display:grid;grid-template-columns:minmax(0,24%) minmax(0,1fr) minmax(0,33%);height:var(--weatherwise-card-height,clamp(390px,30cqw,620px));min-height:0;max-height:var(--weatherwise-card-max-height,680px)}
       .card-grid.no-radar{grid-template-columns:minmax(260px,34%) minmax(0,1fr)}
-      .left{min-width:0;display:flex;flex-direction:column;padding:12px 18px 10px;border-right:1px solid rgba(255,255,255,0.22)}
+      .left{min-width:0;display:flex;flex-direction:column;padding:12px 18px 10px;border-right:1px solid rgba(255,255,255,0.22);overflow:hidden}
       .header{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
       .title{font-size:28px;font-weight:800;color:var(--ww-text);white-space:nowrap;letter-spacing:0}
       .subtitle{font-size:13px;color:var(--ww-muted);letter-spacing:.05em;text-transform:uppercase;font-weight:650;white-space:nowrap}
@@ -679,7 +701,7 @@ class WeatherWiseCard extends HTMLElement {
       .temp-block{text-align:right;flex:0 1 auto;min-width:max-content}
       .temp-now{font-size:50px;font-weight:800;color:var(--ww-text);line-height:1;letter-spacing:0}
       .temp-hilo{font-size:16px;color:var(--ww-muted);font-weight:700;margin-top:7px}
-      .daily-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;min-height:140px;margin-bottom:8px;flex:1}
+      .daily-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;min-height:0;margin-bottom:8px;flex:1}
       .fc-slot{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:8px 6px;background:var(--ww-panel);border-radius:12px;border:1px solid var(--ww-line);min-width:0}
       .fc-day{font-size:16px;font-weight:720;color:var(--ww-text);text-transform:uppercase;line-height:1.05;text-align:center}
       .fc-period{font-size:11px;font-weight:800;color:var(--ww-muted);text-transform:uppercase;letter-spacing:.045em;margin-top:2px;min-height:13px;line-height:1.05;text-align:center}
@@ -693,7 +715,7 @@ class WeatherWiseCard extends HTMLElement {
       .stat-lbl{font-size:9px;color:var(--ww-muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
       .stat-val{font-size:14px;font-weight:800;color:var(--ww-text);white-space:nowrap}
       .right{min-width:0;position:relative;overflow:hidden}
-      #rmap{width:100%;height:100%;min-height:620px}
+      #rmap{width:100%;height:100%;min-height:0}
       .radar-lbl{position:absolute;bottom:10px;left:12px;font-size:12px;color:rgba(10,30,46,0.76);background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.55);padding:4px 10px;border-radius:99px;font-weight:800;z-index:1000;pointer-events:none}
       .leaflet-control-zoom{border:0!important;box-shadow:0 2px 12px rgba(10,30,46,.13)!important}
       .leaflet-control-zoom a{width:34px!important;height:34px!important;line-height:31px!important;color:#0a1e2e!important;background:rgba(255,255,255,.82)!important;border-color:rgba(10,30,46,.10)!important;font-weight:650!important}
@@ -703,9 +725,9 @@ class WeatherWiseCard extends HTMLElement {
       .debug-panel{margin-top:10px;background:var(--ww-panel);border:1px solid var(--ww-line);border-radius:12px;padding:8px;font-size:12px;color:var(--ww-muted)}
       .debug-row{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
       .debug-row code{color:var(--ww-text)}
-      @container(max-width:1100px){.card-grid{grid-template-columns:minmax(260px,34%) minmax(0,1fr);grid-template-rows:auto minmax(300px,38cqw);min-height:0}.card-grid.no-radar{grid-template-columns:minmax(240px,34%) minmax(0,1fr)}.center{border-right:0}.right{grid-column:1 / -1;min-height:300px;border-top:1px solid rgba(255,255,255,0.28)}#rmap{min-height:300px}.clock-time{font-size:54px}.temp-now{font-size:44px}.cond-name{font-size:25px}.hour-row{grid-template-columns:44px 22px 38px 1fr;gap:6px}.stat{padding:6px 8px;gap:7px}}
-      @container(max-width:720px){.card-grid,.card-grid.no-radar{display:flex;flex-direction:column}.left,.center{border-right:0}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{min-height:300px}.title{font-size:24px}}
-      @media(max-width:760px){.card-grid,.card-grid.no-radar{display:flex;flex-direction:column}.left,.center{border-right:0}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{min-height:300px}.title{font-size:24px}}
+      @container(max-width:1100px){.card-grid{grid-template-columns:minmax(260px,34%) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(220px,34%);height:var(--weatherwise-card-height,clamp(470px,56cqw,620px));min-height:0}.card-grid.no-radar{grid-template-columns:minmax(240px,34%) minmax(0,1fr);grid-template-rows:1fr;height:var(--weatherwise-card-height,clamp(390px,46cqw,560px))}.center{border-right:0}.right{grid-column:1 / -1;min-height:0;border-top:1px solid rgba(255,255,255,0.28)}#rmap{min-height:0}.clock-time{font-size:54px}.temp-now{font-size:44px}.cond-name{font-size:25px}.hour-row{grid-template-columns:44px 22px 38px 1fr;gap:6px}.stat{padding:6px 8px;gap:7px}}
+      @container(max-width:720px){.card-grid,.card-grid.no-radar{display:flex;flex-direction:column;height:auto;max-height:none}.left,.center{border-right:0;overflow:visible}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{height:300px;min-height:300px}.title{font-size:24px}}
+      @media(max-width:760px){.card-grid,.card-grid.no-radar{display:flex;flex-direction:column;height:auto;max-height:none}.left,.center{border-right:0;overflow:visible}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{height:300px;min-height:300px}.title{font-size:24px}}
     `;
   }
 }
