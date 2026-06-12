@@ -259,6 +259,8 @@ If WeatherWise helps your dashboard, you can support development here:
 
 [Buy Me a Coffee](https://buymeacoffee.com/thewillmiller)
 
+Available for custom Home Assistant dashboards, Lovelace cards, and kiosk interfaces. I take 2-3 commissions/month, typically $300-600 depending on scope.
+
 ## Troubleshooting
 
 ### WeatherWise does not show in the card picker
