@@ -3,7 +3,7 @@
  * Home Assistant weather dashboard card with forecasts and optional radar.
  */
 
-const CARD_VERSION = "0.1.0-beta.1";
+const CARD_VERSION = "0.1.0-beta.2";
 const CARD_TYPES = ["weatherwise-card", "weather-wise-card"];
 
 const WEATHERWISE_COUNTRIES = {
@@ -230,7 +230,7 @@ class WeatherWiseCard extends HTMLElement {
       <style>${this._styles()}</style>
       <ha-card>
         <div class="card-outer">
-          <div class="card-grid">
+          <div class="card-grid ${this._config.show_radar && provider !== "none" ? "" : "no-radar"}">
             <section class="left">
               <div class="header">
                 <div class="title">${this._escape(title)}</div>
@@ -649,10 +649,11 @@ class WeatherWiseCard extends HTMLElement {
       :host([theme-mode="auto"]){--ww-wave:var(--primary-color,#2a7a94);--ww-wave-dark:var(--accent-color,var(--primary-color,#1a5f72));--ww-gold:var(--warning-color,#e8b84b);--ww-text:var(--primary-text-color,#0a1e28);--ww-muted:var(--secondary-text-color,#1e4d5e);--ww-panel:color-mix(in srgb,var(--card-background-color,#fff) 76%,transparent);--ww-line:color-mix(in srgb,var(--primary-color,#2a7a94) 30%,transparent)}
       ha-card{background:transparent!important;box-shadow:none!important;border-radius:22px!important;overflow:hidden}
       *{box-sizing:border-box}
-      .card-outer{background:linear-gradient(135deg,rgba(255,255,255,0.70),rgba(222,244,248,0.58));backdrop-filter:blur(12px) saturate(1.08);-webkit-backdrop-filter:blur(12px) saturate(1.08);border-radius:22px;border:1px solid rgba(255,255,255,0.40);box-shadow:0 5px 24px rgba(10,50,70,0.14);position:relative;overflow:hidden}
+      .card-outer{container-type:inline-size;background:linear-gradient(135deg,rgba(255,255,255,0.70),rgba(222,244,248,0.58));backdrop-filter:blur(12px) saturate(1.08);-webkit-backdrop-filter:blur(12px) saturate(1.08);border-radius:22px;border:1px solid rgba(255,255,255,0.40);box-shadow:0 5px 24px rgba(10,50,70,0.14);position:relative;overflow:hidden}
       :host([theme-mode="auto"]) .card-outer{background:linear-gradient(135deg,color-mix(in srgb,var(--card-background-color,#fff) 88%,transparent),color-mix(in srgb,var(--primary-color,#2a7a94) 14%,var(--card-background-color,#fff)))}
       .card-outer::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ww-wave) 62%,transparent),transparent)}
-      .card-grid{display:grid;grid-template-columns:minmax(320px,24%) minmax(620px,1fr) minmax(500px,33%);min-height:620px}
+      .card-grid{display:grid;grid-template-columns:minmax(0,24%) minmax(0,1fr) minmax(0,33%);min-height:620px}
+      .card-grid.no-radar{grid-template-columns:minmax(260px,34%) minmax(0,1fr)}
       .left{min-width:0;display:flex;flex-direction:column;padding:12px 18px 10px;border-right:1px solid rgba(255,255,255,0.22)}
       .header{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
       .title{font-size:28px;font-weight:800;color:var(--ww-text);white-space:nowrap;letter-spacing:0}
@@ -670,12 +671,12 @@ class WeatherWiseCard extends HTMLElement {
       .hour-bar-wrap{height:7px;border-radius:999px;background:rgba(18,59,83,0.10);position:relative;overflow:hidden}
       .hour-bar-fill{position:absolute;top:0;left:0;height:100%;border-radius:999px;background:linear-gradient(90deg,#58b7c7,var(--ww-wave))}
       .center{min-width:0;display:flex;flex-direction:column;padding:14px 16px;border-right:1px solid rgba(255,255,255,0.22);overflow:hidden}
-      .current-row{display:flex;align-items:center;gap:13px;background:var(--ww-panel);border:1px solid var(--ww-line);border-radius:14px;padding:8px 13px;margin-bottom:9px}
+      .current-row{display:flex;align-items:center;gap:13px;background:var(--ww-panel);border:1px solid var(--ww-line);border-radius:14px;padding:8px 13px;margin-bottom:9px;min-width:0;overflow:hidden}
       .current-icon{width:68px;height:68px;flex-shrink:0;display:grid;place-items:center}
       .cond-block{flex:1;min-width:0}
-      .cond-name{font-size:28px;font-weight:800;color:var(--ww-text);line-height:1.05}
+      .cond-name{font-size:28px;font-weight:800;color:var(--ww-text);line-height:1.05;overflow-wrap:anywhere}
       .updated-note{font-size:11px;color:var(--ww-muted);font-weight:750;margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
-      .temp-block{text-align:right;flex-shrink:0}
+      .temp-block{text-align:right;flex:0 1 auto;min-width:max-content}
       .temp-now{font-size:50px;font-weight:800;color:var(--ww-text);line-height:1;letter-spacing:0}
       .temp-hilo{font-size:16px;color:var(--ww-muted);font-weight:700;margin-top:7px}
       .daily-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;min-height:140px;margin-bottom:8px;flex:1}
@@ -702,9 +703,9 @@ class WeatherWiseCard extends HTMLElement {
       .debug-panel{margin-top:10px;background:var(--ww-panel);border:1px solid var(--ww-line);border-radius:12px;padding:8px;font-size:12px;color:var(--ww-muted)}
       .debug-row{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
       .debug-row code{color:var(--ww-text)}
-      @media(max-width:1500px){.card-grid{grid-template-columns:minmax(300px,24%) minmax(560px,1fr) minmax(430px,32%)}.clock-time{font-size:54px}.temp-now{font-size:44px}.cond-name{font-size:25px}.hour-row{grid-template-columns:44px 22px 38px 1fr;gap:6px}.stat{padding:6px 8px;gap:7px}}
-      @media(max-width:1350px){.card-grid{grid-template-columns:minmax(300px,36%) minmax(0,1fr);grid-template-rows:auto minmax(330px,42vh);min-height:0}.center{border-right:0}.right{grid-column:1 / -1;min-height:330px;border-top:1px solid rgba(255,255,255,0.28)}#rmap{min-height:330px}}
-      @media(max-width:760px){.card-grid{display:flex;flex-direction:column}.left,.center{border-right:0}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{min-height:300px}.title{font-size:24px}}
+      @container(max-width:1100px){.card-grid{grid-template-columns:minmax(260px,34%) minmax(0,1fr);grid-template-rows:auto minmax(300px,38cqw);min-height:0}.card-grid.no-radar{grid-template-columns:minmax(240px,34%) minmax(0,1fr)}.center{border-right:0}.right{grid-column:1 / -1;min-height:300px;border-top:1px solid rgba(255,255,255,0.28)}#rmap{min-height:300px}.clock-time{font-size:54px}.temp-now{font-size:44px}.cond-name{font-size:25px}.hour-row{grid-template-columns:44px 22px 38px 1fr;gap:6px}.stat{padding:6px 8px;gap:7px}}
+      @container(max-width:720px){.card-grid,.card-grid.no-radar{display:flex;flex-direction:column}.left,.center{border-right:0}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{min-height:300px}.title{font-size:24px}}
+      @media(max-width:760px){.card-grid,.card-grid.no-radar{display:flex;flex-direction:column}.left,.center{border-right:0}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{min-height:300px}.title{font-size:24px}}
     `;
   }
 }
@@ -844,17 +845,20 @@ class WeatherWiseCardEditor extends HTMLElement {
   }
 }
 
-for (const type of CARD_TYPES) {
-  if (!customElements.get(type)) customElements.define(type, WeatherWiseCard);
-}
+class WeatherWiseDashedCard extends WeatherWiseCard {}
+class WeatherWiseDashedCardEditor extends WeatherWiseCardEditor {}
+
+if (!customElements.get(CARD_TYPES[0])) customElements.define(CARD_TYPES[0], WeatherWiseCard);
+if (!customElements.get(CARD_TYPES[1])) customElements.define(CARD_TYPES[1], WeatherWiseDashedCard);
 if (!customElements.get("weatherwise-card-editor")) customElements.define("weatherwise-card-editor", WeatherWiseCardEditor);
-if (!customElements.get("weather-wise-card-editor")) customElements.define("weather-wise-card-editor", WeatherWiseCardEditor);
+if (!customElements.get("weather-wise-card-editor")) customElements.define("weather-wise-card-editor", WeatherWiseDashedCardEditor);
 
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: "weatherwise-card",
-  name: "WeatherWise",
-  description: "Weather dashboard with forecasts, theme support, and optional radar.",
+  name: "WeatherWise Weather",
+  description: "Weather dashboard card with forecasts, theme support, and optional radar.",
+  documentationURL: "https://github.com/TheWillMiller/weather-wise",
   preview: true
 });
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0-beta.2
+
+### Fixed
+
+- Fixed the visual editor/card picker script failure caused by registering the same custom element class under two tag names.
+- Added a clearer card picker name: **WeatherWise Weather**.
+- Improved dashboard-column layout by using card/container width breakpoints instead of only viewport width.
+- Fixed narrow card overflow when radar is hidden or the card is placed in a smaller dashboard column.
+
 ## 0.1.0-beta.1
 
 ### Added
