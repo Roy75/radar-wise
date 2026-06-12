@@ -3,7 +3,7 @@
  * Home Assistant weather dashboard card with forecasts and optional radar.
  */
 
-const CARD_VERSION = "0.2.0-beta.7";
+const CARD_VERSION = "0.2.0-beta.8";
 const FORECAST_REFRESH_MS = 15 * 60 * 1000;
 const CARD_TYPES = ["weatherwise-card", "weather-wise-card"];
 
@@ -65,6 +65,7 @@ class WeatherWiseCard extends HTMLElement {
       radar_basemap: "light",
       radar_timeline: "loop",
       show_warning_overlay: true,
+      show_animations: true,
       latitude: 33.688,
       longitude: -78.886,
       grid_options: {
@@ -119,6 +120,7 @@ class WeatherWiseCard extends HTMLElement {
     const previous = this._config || {};
     this._config = normalized;
     this.setAttribute("theme-mode", this._config.theme_mode);
+    this.toggleAttribute("animations", this._config.show_animations !== false);
     if (
       previous.entity !== this._config.entity ||
       previous.country !== this._config.country ||
@@ -208,6 +210,7 @@ class WeatherWiseCard extends HTMLElement {
       radar_basemap: "light",
       radar_timeline: "loop",
       show_warning_overlay: true,
+      show_animations: true,
       radar_zoom: 7,
       radar_speed: 700,
       debug: { enabled: false, panel: false },
@@ -222,6 +225,7 @@ class WeatherWiseCard extends HTMLElement {
       show_map_controls: config.show_map_controls !== false,
       radar_controls: config.radar_controls !== false,
       show_warning_overlay: config.show_warning_overlay !== false,
+      show_animations: config.show_animations !== false,
       radar_speed: Math.max(300, Math.min(3000, Number(config.radar_speed) || 700))
     };
   }
@@ -913,15 +917,15 @@ class WeatherWiseCard extends HTMLElement {
   _icon(condition, size = 36) {
     const c = String(condition || "").toLowerCase().replace(/[-_]/g, " ");
     const isNight = c.includes("night");
-    if (c.includes("lightning") || c.includes("thunder")) return `<svg width="${size}" height="${size}" viewBox="0 0 40 40"><ellipse cx="22" cy="15" rx="11" ry="8" fill="#94a3b8"/><ellipse cx="14" cy="18" rx="9" ry="6" fill="#cbd5e1"/><polygon points="22,22 16,34 21,31 17,41 28,27 22,30" fill="#fbbf24"/><line x1="14" y1="28" x2="12" y2="34" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/><line x1="27" y1="28" x2="25" y2="34" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/></svg>`;
-    if (c.includes("rain") || c.includes("shower") || c.includes("drizzle")) return `<svg width="${size}" height="${size}" viewBox="0 0 40 40"><ellipse cx="22" cy="14" rx="11" ry="8" fill="#94a3b8"/><ellipse cx="14" cy="17" rx="9" ry="6" fill="#cbd5e1"/><line x1="14" y1="26" x2="12" y2="33" stroke="#38bdf8" stroke-width="2.3" stroke-linecap="round"/><line x1="20" y1="26" x2="18" y2="33" stroke="#38bdf8" stroke-width="2.3" stroke-linecap="round"/><line x1="26" y1="26" x2="24" y2="33" stroke="#38bdf8" stroke-width="2.3" stroke-linecap="round"/></svg>`;
-    if (c.includes("snow") || c.includes("sleet") || c.includes("hail")) return `<svg width="${size}" height="${size}" viewBox="0 0 40 40"><ellipse cx="22" cy="14" rx="11" ry="8" fill="#94a3b8"/><ellipse cx="14" cy="17" rx="9" ry="6" fill="#cbd5e1"/><text x="10" y="34" font-size="13" fill="#93c5fd">*</text><text x="23" y="34" font-size="13" fill="#93c5fd">*</text></svg>`;
-    if ((c.includes("clear") || c.includes("sunny")) && isNight) return `<svg width="${size}" height="${size}" viewBox="0 0 40 40"><circle cx="23" cy="20" r="10" fill="#fbbf24"/><path d="M24 8q-10 4-10 14 0 8 7 12Q8 31 8 20 8 8 20 5q-1 2 4 3Z" fill="#1e3a5f"/></svg>`;
-    if ((c.includes("partly") || c.includes("mostly cloudy") || c.includes("mostlycloudy")) && isNight) return `<svg width="${size}" height="${size}" viewBox="0 0 40 40"><circle cx="16" cy="17" r="8" fill="#fbbf24"/><path d="M17 8q-7 3-7 10 0 5 4 8Q6 24 6 17 6 8 15 6q-1 1 2 2Z" fill="#1e3a5f"/><ellipse cx="27" cy="24" rx="10" ry="7" fill="#94a3b8"/><ellipse cx="20" cy="27" rx="8" ry="6" fill="#cbd5e1"/></svg>`;
-    if (c.includes("sunny") || c.includes("clear")) return `<svg width="${size}" height="${size}" viewBox="0 0 40 40"><circle cx="20" cy="20" r="8.5" fill="#fbbf24"/><g stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round"><line x1="20" y1="4" x2="20" y2="8"/><line x1="20" y1="32" x2="20" y2="36"/><line x1="4" y1="20" x2="8" y2="20"/><line x1="32" y1="20" x2="36" y2="20"/></g></svg>`;
-    if (c.includes("partly") || c.includes("mostly cloudy") || c.includes("mostlycloudy")) return `<svg width="${size}" height="${size}" viewBox="0 0 40 40"><circle cx="14" cy="19" r="7" fill="#fbbf24"/><ellipse cx="26" cy="22" rx="11" ry="8" fill="#94a3b8"/><ellipse cx="18" cy="25" rx="9" ry="7" fill="#cbd5e1"/></svg>`;
-    if (c.includes("fog") || c.includes("mist")) return `<svg width="${size}" height="${size}" viewBox="0 0 40 40"><line x1="8" y1="16" x2="32" y2="16" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/><line x1="6" y1="22" x2="34" y2="22" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/><line x1="10" y1="28" x2="30" y2="28" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/></svg>`;
-    return `<svg width="${size}" height="${size}" viewBox="0 0 40 40"><ellipse cx="23" cy="17" rx="12" ry="9" fill="#94a3b8"/><ellipse cx="14" cy="21" rx="9" ry="7" fill="#cbd5e1"/></svg>`;
+    if (c.includes("lightning") || c.includes("thunder")) return `<svg class="ww-icon ww-thunder" width="${size}" height="${size}" viewBox="0 0 40 40"><g class="ww-cloud"><ellipse cx="22" cy="15" rx="11" ry="8" fill="#94a3b8"/><ellipse cx="14" cy="18" rx="9" ry="6" fill="#cbd5e1"/></g><polygon class="ww-bolt" points="22,22 16,34 21,31 17,41 28,27 22,30" fill="#fbbf24"/><g class="ww-rain"><line x1="14" y1="28" x2="12" y2="34" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/><line x1="27" y1="28" x2="25" y2="34" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/></g></svg>`;
+    if (c.includes("rain") || c.includes("shower") || c.includes("drizzle")) return `<svg class="ww-icon ww-rainy" width="${size}" height="${size}" viewBox="0 0 40 40"><g class="ww-cloud"><ellipse cx="22" cy="14" rx="11" ry="8" fill="#94a3b8"/><ellipse cx="14" cy="17" rx="9" ry="6" fill="#cbd5e1"/></g><g class="ww-rain"><line x1="14" y1="26" x2="12" y2="33" stroke="#38bdf8" stroke-width="2.3" stroke-linecap="round"/><line x1="20" y1="26" x2="18" y2="33" stroke="#38bdf8" stroke-width="2.3" stroke-linecap="round"/><line x1="26" y1="26" x2="24" y2="33" stroke="#38bdf8" stroke-width="2.3" stroke-linecap="round"/></g></svg>`;
+    if (c.includes("snow") || c.includes("sleet") || c.includes("hail")) return `<svg class="ww-icon ww-snowy" width="${size}" height="${size}" viewBox="0 0 40 40"><g class="ww-cloud"><ellipse cx="22" cy="14" rx="11" ry="8" fill="#94a3b8"/><ellipse cx="14" cy="17" rx="9" ry="6" fill="#cbd5e1"/></g><g class="ww-snow"><text x="10" y="34" font-size="13" fill="#93c5fd">*</text><text x="23" y="34" font-size="13" fill="#93c5fd">*</text></g></svg>`;
+    if ((c.includes("clear") || c.includes("sunny")) && isNight) return `<svg class="ww-icon ww-moon" width="${size}" height="${size}" viewBox="0 0 40 40"><circle class="ww-moon-glow" cx="23" cy="20" r="10" fill="#fbbf24"/><path class="ww-moon-cut" d="M24 8q-10 4-10 14 0 8 7 12Q8 31 8 20 8 8 20 5q-1 2 4 3Z" fill="#1e3a5f"/></svg>`;
+    if ((c.includes("partly") || c.includes("mostly cloudy") || c.includes("mostlycloudy")) && isNight) return `<svg class="ww-icon ww-partly-night" width="${size}" height="${size}" viewBox="0 0 40 40"><g class="ww-moon"><circle class="ww-moon-glow" cx="16" cy="17" r="8" fill="#fbbf24"/><path class="ww-moon-cut" d="M17 8q-7 3-7 10 0 5 4 8Q6 24 6 17 6 8 15 6q-1 1 2 2Z" fill="#1e3a5f"/></g><g class="ww-cloud"><ellipse cx="27" cy="24" rx="10" ry="7" fill="#94a3b8"/><ellipse cx="20" cy="27" rx="8" ry="6" fill="#cbd5e1"/></g></svg>`;
+    if (c.includes("sunny") || c.includes("clear")) return `<svg class="ww-icon ww-sunny" width="${size}" height="${size}" viewBox="0 0 40 40"><circle class="ww-sun-core" cx="20" cy="20" r="8.5" fill="#fbbf24"/><g class="ww-sun-rays" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round"><line x1="20" y1="4" x2="20" y2="8"/><line x1="20" y1="32" x2="20" y2="36"/><line x1="4" y1="20" x2="8" y2="20"/><line x1="32" y1="20" x2="36" y2="20"/></g></svg>`;
+    if (c.includes("partly") || c.includes("mostly cloudy") || c.includes("mostlycloudy")) return `<svg class="ww-icon ww-partly" width="${size}" height="${size}" viewBox="0 0 40 40"><circle class="ww-sun-core" cx="14" cy="19" r="7" fill="#fbbf24"/><g class="ww-cloud"><ellipse cx="26" cy="22" rx="11" ry="8" fill="#94a3b8"/><ellipse cx="18" cy="25" rx="9" ry="7" fill="#cbd5e1"/></g></svg>`;
+    if (c.includes("fog") || c.includes("mist")) return `<svg class="ww-icon ww-foggy" width="${size}" height="${size}" viewBox="0 0 40 40"><g class="ww-fog"><line x1="8" y1="16" x2="32" y2="16" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/><line x1="6" y1="22" x2="34" y2="22" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/><line x1="10" y1="28" x2="30" y2="28" stroke="#94a3b8" stroke-width="3" stroke-linecap="round"/></g></svg>`;
+    return `<svg class="ww-icon ww-cloudy" width="${size}" height="${size}" viewBox="0 0 40 40"><g class="ww-cloud"><ellipse cx="23" cy="17" rx="12" ry="9" fill="#94a3b8"/><ellipse cx="14" cy="21" rx="9" ry="7" fill="#cbd5e1"/></g></svg>`;
   }
 
   _styles() {
@@ -971,6 +975,38 @@ class WeatherWiseCard extends HTMLElement {
       .stat-ico svg{width:27px;height:27px}
       .stat-lbl{font-size:12px;color:var(--ww-muted);font-weight:900;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
       .stat-val{font-size:19px;font-weight:900;color:var(--ww-text);white-space:nowrap}
+      .ww-icon{overflow:visible;transform-box:fill-box}
+      :host([animations]) .current-icon .ww-icon{filter:drop-shadow(0 8px 14px rgba(42,122,148,.14))}
+      :host([animations]) .ww-sun-rays{transform-origin:20px 20px;animation:ww-sun-spin 28s linear infinite}
+      :host([animations]) .ww-sun-core{transform-origin:center;animation:ww-sun-breathe 4.8s ease-in-out infinite}
+      :host([animations]) .ww-cloud{animation:ww-cloud-drift 7.5s ease-in-out infinite}
+      :host([animations]) .ww-rain{animation:ww-rain-fall .95s ease-in-out infinite}
+      :host([animations]) .ww-snow{animation:ww-snow-float 2.8s ease-in-out infinite}
+      :host([animations]) .ww-bolt{animation:ww-bolt-flash 4.8s steps(1,end) infinite}
+      :host([animations]) .ww-moon,:host([animations]) .ww-moon-glow{animation:ww-moon-float 6.5s ease-in-out infinite}
+      :host([animations]) .ww-fog{animation:ww-fog-slide 6s ease-in-out infinite}
+      :host([animations]) .hour-row{animation:ww-row-in .42s ease-out both}
+      :host([animations]) .hour-row:nth-child(2){animation-delay:.03s}
+      :host([animations]) .hour-row:nth-child(3){animation-delay:.06s}
+      :host([animations]) .hour-row:nth-child(4){animation-delay:.09s}
+      :host([animations]) .hour-row:nth-child(5){animation-delay:.12s}
+      :host([animations]) .hour-row:nth-child(6){animation-delay:.15s}
+      :host([animations]) .fc-slot{animation:ww-card-rise .48s ease-out both}
+      :host([animations]) .fc-slot:nth-child(2){animation-delay:.04s}
+      :host([animations]) .fc-slot:nth-child(3){animation-delay:.08s}
+      :host([animations]) .fc-slot:nth-child(4){animation-delay:.12s}
+      :host([animations]) .fc-slot:nth-child(5){animation-delay:.16s}
+      :host([animations]) .hour-bar-fill{transition:width .7s cubic-bezier(.2,.8,.2,1)}
+      @keyframes ww-sun-spin{to{transform:rotate(360deg)}}
+      @keyframes ww-sun-breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+      @keyframes ww-cloud-drift{0%,100%{transform:translateX(0)}50%{transform:translateX(1.4px)}}
+      @keyframes ww-rain-fall{0%{transform:translateY(-1px);opacity:.72}55%{transform:translateY(1.9px);opacity:1}100%{transform:translateY(3px);opacity:.72}}
+      @keyframes ww-snow-float{0%,100%{transform:translateY(-1px)}50%{transform:translateY(2px)}}
+      @keyframes ww-bolt-flash{0%,88%,100%{opacity:.92}90%,93%{opacity:.35}91%,95%{opacity:1}}
+      @keyframes ww-moon-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.5px)}}
+      @keyframes ww-fog-slide{0%,100%{transform:translateX(-1px);opacity:.76}50%{transform:translateX(2px);opacity:1}}
+      @keyframes ww-row-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+      @keyframes ww-card-rise{from{opacity:0;transform:translateY(6px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
       .right{min-width:0;position:relative;overflow:hidden;border-radius:0 22px 22px 0}
       #rmap{width:100%;height:100%;min-height:0}
       .leaflet-container{height:100%;width:100%;position:relative;overflow:hidden;outline-offset:1px;background:#d7dee2;font-family:inherit;font-size:12px;line-height:1.5;z-index:0}
@@ -1007,6 +1043,7 @@ class WeatherWiseCard extends HTMLElement {
       @container(max-width:1180px){.card-grid{grid-template-columns:minmax(250px,30%) minmax(0,1fr);height:var(--weatherwise-card-height,clamp(520px,52cqw,620px))}.center{border-right:0}.right{grid-column:1 / -1;height:220px;border-top:1px solid rgba(255,255,255,0.28);border-radius:0 0 22px 22px}#rmap{height:220px}.daily-strip{min-height:150px;max-height:none}}
       @container(max-width:720px){.card-grid,.card-grid.no-radar{display:flex;flex-direction:column;height:auto;max-height:none}.left,.center{border-right:0;overflow:visible}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{height:300px;min-height:300px}}
       @media(max-width:760px){.card-grid,.card-grid.no-radar{display:flex;flex-direction:column;height:auto;max-height:none}.left,.center{border-right:0;overflow:visible}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{height:300px;min-height:300px}}
+      @media(prefers-reduced-motion:reduce){:host([animations]) .ww-sun-rays,:host([animations]) .ww-sun-core,:host([animations]) .ww-cloud,:host([animations]) .ww-rain,:host([animations]) .ww-snow,:host([animations]) .ww-bolt,:host([animations]) .ww-moon,:host([animations]) .ww-moon-glow,:host([animations]) .ww-fog,:host([animations]) .hour-row,:host([animations]) .fc-slot{animation:none!important}:host([animations]) .hour-bar-fill{transition:none!important}}
     `;
   }
 }
@@ -1044,7 +1081,7 @@ class WeatherWiseCardEditor extends HTMLElement {
 
   _setValue(key, value) {
     const numberKeys = ["latitude", "longitude", "hourly_count", "radar_zoom", "radar_speed"];
-    const booleanKeys = ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay"];
+    const booleanKeys = ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay", "show_animations"];
     let nextValue = value;
     if (numberKeys.includes(key)) nextValue = value === "" ? undefined : Number(value);
     if (booleanKeys.includes(key)) nextValue = Boolean(value);
@@ -1161,6 +1198,8 @@ class WeatherWiseCardEditor extends HTMLElement {
             </label>
             <label>Hourly rows <input id="hourly_count" type="number" min="1" max="24" value="${this._escape(config.hourly_count || 5)}"></label>
           </div>
+          <label class="check"><input id="show_animations" type="checkbox" ${config.show_animations === false ? "" : "checked"}> Subtle weather animations</label>
+          <div class="hint">Animations automatically pause when the browser or device requests reduced motion.</div>
         </div>
         <div class="section">
           <div class="section-title">Radar location</div>
@@ -1181,7 +1220,7 @@ class WeatherWiseCardEditor extends HTMLElement {
     ["entity", "humidity_entity", "country", "radar_provider", "radar_style", "radar_basemap", "radar_timeline", "title", "units", "theme_mode", "latitude", "longitude", "hourly_count", "radar_zoom", "radar_speed"].forEach((id) => {
       this.shadowRoot.getElementById(id)?.addEventListener("change", (event) => this._setValue(id, event.target.value));
     });
-    ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay"].forEach((id) => {
+    ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay", "show_animations"].forEach((id) => {
       this.shadowRoot.getElementById(id)?.addEventListener("change", (event) => this._setValue(id, event.target.checked));
     });
   }

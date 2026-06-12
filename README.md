@@ -5,7 +5,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/TheWillMiller/weather-wise?label=stars)](https://github.com/TheWillMiller/weather-wise/stargazers)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-yellow?logo=buymeacoffee)](https://buymeacoffee.com/thewillmiller)
 
-**Latest beta:** `v0.2.0-beta.7`
+**Latest beta:** `v0.2.0-beta.8`
 
 WeatherWise is a Home Assistant dashboard (Lovelace) custom card for current weather, hourly and daily forecasts, sunrise and sunset, wind, humidity, and optional radar. It follows the TideWise/RiverWise visual language while staying a dashboard card, not a backend integration.
 
@@ -117,7 +117,7 @@ type: module
 For quick testing before installing locally, you can add this dashboard resource:
 
 ```yaml
-url: https://cdn.jsdelivr.net/gh/TheWillMiller/weather-wise@v0.2.0-beta.7/weatherwise-card.js
+url: https://cdn.jsdelivr.net/gh/TheWillMiller/weather-wise@v0.2.0-beta.8/weatherwise-card.js
 type: module
 ```
 
@@ -200,6 +200,7 @@ WeatherWise includes a Home Assistant visual editor. When adding the card from t
 - Choose automatic radar, NOAA radar, RainViewer radar, or no radar
 - Choose radar timeline, style, map style, and radar loop speed
 - Set title, units, hourly row count, and theme mode
+- Enable or disable subtle weather animations
 - Set radar latitude/longitude and zoom
 - Show or hide the radar panel
 - Show or hide map controls
@@ -219,6 +220,7 @@ WeatherWise includes a Home Assistant visual editor. When adding the card from t
 | `theme_mode` | No | `weatherwise` | `weatherwise` or `auto`. |
 | `units` | No | `auto` | `auto`, `imperial`, or `metric`. |
 | `hourly_count` | No | `5` | Number of hourly forecast rows, 1-24. More rows can scroll inside compact cards. |
+| `show_animations` | No | `true` | Show subtle weather icon, forecast, and hourly row animations. Respects reduced-motion settings. |
 | `show_radar` | No | `true` | Show or hide the radar panel. |
 | `show_map_controls` | No | `true` | Show or hide map zoom controls. |
 | `radar_controls` | No | `true` | Show or hide radar playback controls. |

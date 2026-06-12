@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0-beta.8
+
+### Added
+
+- Added subtle built-in weather icon animations for sun, moon, clouds, rain, snow, fog, and thunder conditions.
+- Added a visual editor toggle and YAML option to disable animations with `show_animations: false`.
+
+### Changed
+
+- Forecast and hourly items now ease into place for a more polished wall-panel feel.
+- Animations respect browser/device reduced-motion preferences automatically.
+
 ## 0.2.0-beta.7
 
 ### Changed
