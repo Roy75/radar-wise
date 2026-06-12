@@ -3,7 +3,7 @@
  * Home Assistant weather dashboard card with forecasts and optional radar.
  */
 
-const CARD_VERSION = "0.1.0-beta.3";
+const CARD_VERSION = "0.1.0-beta.4";
 const CARD_TYPES = ["weatherwise-card", "weather-wise-card"];
 
 const WEATHERWISE_COUNTRIES = {
@@ -671,17 +671,17 @@ class WeatherWiseCard extends HTMLElement {
       :host([theme-mode="auto"]){--ww-wave:var(--primary-color,#2a7a94);--ww-wave-dark:var(--accent-color,var(--primary-color,#1a5f72));--ww-gold:var(--warning-color,#e8b84b);--ww-text:var(--primary-text-color,#0a1e28);--ww-muted:var(--secondary-text-color,#1e4d5e);--ww-panel:color-mix(in srgb,var(--card-background-color,#fff) 76%,transparent);--ww-line:color-mix(in srgb,var(--primary-color,#2a7a94) 30%,transparent)}
       ha-card{background:transparent!important;box-shadow:none!important;border-radius:22px!important;overflow:hidden}
       *{box-sizing:border-box}
-      .card-outer{container-type:inline-size;background:linear-gradient(135deg,rgba(255,255,255,0.70),rgba(222,244,248,0.58));backdrop-filter:blur(12px) saturate(1.08);-webkit-backdrop-filter:blur(12px) saturate(1.08);border-radius:22px;border:1px solid rgba(255,255,255,0.40);box-shadow:0 5px 24px rgba(10,50,70,0.14);position:relative;overflow:hidden}
+      .card-outer{container-type:inline-size;background:rgba(232,246,250,0.74);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:22px;border:1px solid rgba(255,255,255,0.42);box-shadow:0 4px 28px rgba(0,0,0,0.10);position:relative;overflow:hidden}
       :host([theme-mode="auto"]) .card-outer{background:linear-gradient(135deg,color-mix(in srgb,var(--card-background-color,#fff) 88%,transparent),color-mix(in srgb,var(--primary-color,#2a7a94) 14%,var(--card-background-color,#fff)))}
       .card-outer::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ww-wave) 62%,transparent),transparent)}
-      .card-grid{display:grid;grid-template-columns:minmax(0,24%) minmax(0,1fr) minmax(0,33%);height:var(--weatherwise-card-height,clamp(390px,30cqw,620px));min-height:0;max-height:var(--weatherwise-card-max-height,680px)}
+      .card-grid{display:grid;grid-template-columns:minmax(300px,24%) minmax(560px,1fr) minmax(430px,32%);height:var(--weatherwise-card-height,clamp(380px,20cqw,440px));min-height:0;max-height:var(--weatherwise-card-max-height,480px)}
       .card-grid.no-radar{grid-template-columns:minmax(260px,34%) minmax(0,1fr)}
-      .left{min-width:0;display:flex;flex-direction:column;padding:12px 18px 10px;border-right:1px solid rgba(255,255,255,0.22);overflow:hidden}
+      .left{min-width:0;display:flex;flex-direction:column;padding:14px 22px 12px;background:linear-gradient(90deg,rgba(255,255,255,0.20),rgba(255,255,255,0.08));border-right:1px solid rgba(255,255,255,0.22);overflow:hidden}
       .header{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
       .title{font-size:28px;font-weight:800;color:var(--ww-text);white-space:nowrap;letter-spacing:0}
       .subtitle{font-size:13px;color:var(--ww-muted);letter-spacing:.05em;text-transform:uppercase;font-weight:650;white-space:nowrap}
       .clock-row{display:flex;align-items:baseline;gap:8px;line-height:1}
-      .clock-time{font-size:58px;font-weight:650;color:var(--ww-text);letter-spacing:0}
+      .clock-time{font-size:70px;font-weight:500;color:var(--ww-text);letter-spacing:0}
       .clock-ampm{font-size:18px;font-weight:750;color:var(--ww-muted)}
       .clock-date{font-size:14px;color:var(--ww-muted);font-weight:750;margin-top:8px;margin-bottom:13px}
       .section-title,.current-label{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--ww-muted);font-weight:750;white-space:nowrap}
@@ -692,17 +692,17 @@ class WeatherWiseCard extends HTMLElement {
       .hour-temp-left{font-size:13px;font-weight:800;color:var(--ww-text);text-align:right}
       .hour-bar-wrap{height:7px;border-radius:999px;background:rgba(18,59,83,0.10);position:relative;overflow:hidden}
       .hour-bar-fill{position:absolute;top:0;left:0;height:100%;border-radius:999px;background:linear-gradient(90deg,#58b7c7,var(--ww-wave))}
-      .center{min-width:0;display:flex;flex-direction:column;padding:14px 16px;border-right:1px solid rgba(255,255,255,0.22);overflow:hidden}
-      .current-row{display:flex;align-items:center;gap:13px;background:var(--ww-panel);border:1px solid var(--ww-line);border-radius:14px;padding:8px 13px;margin-bottom:9px;min-width:0;overflow:hidden}
-      .current-icon{width:68px;height:68px;flex-shrink:0;display:grid;place-items:center}
+      .center{min-width:0;display:flex;flex-direction:column;padding:18px 24px;border-right:1px solid rgba(255,255,255,0.22);overflow:hidden}
+      .current-row{display:flex;align-items:center;gap:16px;margin-bottom:10px;min-width:0;overflow:hidden}
+      .current-icon{width:62px;height:62px;flex-shrink:0;display:grid;place-items:center}
       .cond-block{flex:1;min-width:0}
-      .cond-name{font-size:28px;font-weight:800;color:var(--ww-text);line-height:1.05;overflow-wrap:anywhere}
-      .updated-note{font-size:11px;color:var(--ww-muted);font-weight:750;margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
-      .temp-block{text-align:right;flex:0 1 auto;min-width:max-content}
-      .temp-now{font-size:50px;font-weight:800;color:var(--ww-text);line-height:1;letter-spacing:0}
-      .temp-hilo{font-size:16px;color:var(--ww-muted);font-weight:700;margin-top:7px}
-      .daily-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;min-height:0;margin-bottom:8px;flex:1}
-      .fc-slot{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:8px 6px;background:var(--ww-panel);border-radius:12px;border:1px solid var(--ww-line);min-width:0}
+      .cond-name{font-size:28px;font-weight:720;color:var(--ww-text);line-height:1.05;overflow-wrap:anywhere}
+      .updated-note{font-size:11px;color:var(--ww-muted);font-weight:750;margin-top:5px;text-transform:uppercase;letter-spacing:.04em}
+      .temp-block{text-align:right;flex-shrink:0;min-width:max-content}
+      .temp-now{font-size:52px;font-weight:750;color:var(--ww-text);line-height:1;letter-spacing:0}
+      .temp-hilo{font-size:16px;color:var(--ww-muted);font-weight:700;margin-top:8px}
+      .daily-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;min-height:140px;max-height:166px;margin-bottom:8px;flex:1}
+      .fc-slot{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:8px 6px;background:var(--ww-panel);border-radius:14px;border:1px solid var(--ww-line);min-width:0}
       .fc-day{font-size:16px;font-weight:720;color:var(--ww-text);text-transform:uppercase;line-height:1.05;text-align:center}
       .fc-period{font-size:11px;font-weight:800;color:var(--ww-muted);text-transform:uppercase;letter-spacing:.045em;margin-top:2px;min-height:13px;line-height:1.05;text-align:center}
       .fc-icon{width:50px;height:50px;margin:2px 0 1px;display:flex;align-items:center;justify-content:center}
@@ -714,8 +714,26 @@ class WeatherWiseCard extends HTMLElement {
       .stat-ico svg{width:21px;height:21px}
       .stat-lbl{font-size:9px;color:var(--ww-muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
       .stat-val{font-size:14px;font-weight:800;color:var(--ww-text);white-space:nowrap}
-      .right{min-width:0;position:relative;overflow:hidden}
+      .right{min-width:0;position:relative;overflow:hidden;border-radius:0 22px 22px 0}
       #rmap{width:100%;height:100%;min-height:0}
+      .leaflet-container{height:100%;width:100%;position:relative;overflow:hidden;outline-offset:1px;background:#d7dee2;font-family:inherit;font-size:12px;line-height:1.5;z-index:0}
+      .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+      .leaflet-container img.leaflet-tile,.leaflet-container img.leaflet-image-layer{max-width:none!important;max-height:none!important}
+      .leaflet-tile{filter:inherit;visibility:hidden}
+      .leaflet-tile-loaded{visibility:inherit}
+      .leaflet-map-pane canvas{z-index:100}
+      .leaflet-map-pane svg{z-index:200}
+      .leaflet-tile-pane{z-index:200}
+      .leaflet-overlay-pane{z-index:400}
+      .leaflet-marker-pane{z-index:600}
+      .leaflet-tooltip-pane{z-index:650}
+      .leaflet-popup-pane{z-index:700}
+      .leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
+      .leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}
+      .leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}
+      .leaflet-control-zoom{margin-left:10px;margin-top:10px}
+      .leaflet-control-zoom a{display:block;text-align:center;text-decoration:none}
+      .leaflet-control-attribution{position:absolute;right:0;bottom:0;margin:0;padding:0 5px}
       .radar-lbl{position:absolute;bottom:10px;left:12px;font-size:12px;color:rgba(10,30,46,0.76);background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.55);padding:4px 10px;border-radius:99px;font-weight:800;z-index:1000;pointer-events:none}
       .leaflet-control-zoom{border:0!important;box-shadow:0 2px 12px rgba(10,30,46,.13)!important}
       .leaflet-control-zoom a{width:34px!important;height:34px!important;line-height:31px!important;color:#0a1e2e!important;background:rgba(255,255,255,.82)!important;border-color:rgba(10,30,46,.10)!important;font-weight:650!important}
@@ -725,7 +743,8 @@ class WeatherWiseCard extends HTMLElement {
       .debug-panel{margin-top:10px;background:var(--ww-panel);border:1px solid var(--ww-line);border-radius:12px;padding:8px;font-size:12px;color:var(--ww-muted)}
       .debug-row{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
       .debug-row code{color:var(--ww-text)}
-      @container(max-width:1100px){.card-grid{grid-template-columns:minmax(260px,34%) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(220px,34%);height:var(--weatherwise-card-height,clamp(470px,56cqw,620px));min-height:0}.card-grid.no-radar{grid-template-columns:minmax(240px,34%) minmax(0,1fr);grid-template-rows:1fr;height:var(--weatherwise-card-height,clamp(390px,46cqw,560px))}.center{border-right:0}.right{grid-column:1 / -1;min-height:0;border-top:1px solid rgba(255,255,255,0.28)}#rmap{min-height:0}.clock-time{font-size:54px}.temp-now{font-size:44px}.cond-name{font-size:25px}.hour-row{grid-template-columns:44px 22px 38px 1fr;gap:6px}.stat{padding:6px 8px;gap:7px}}
+      @container(max-width:1500px){.card-grid{grid-template-columns:minmax(300px,24%) minmax(560px,1fr) minmax(430px,32%)}.left{padding:13px 18px 11px}.center{padding:16px 20px}.clock-time{font-size:60px}.temp-now{font-size:46px}.cond-name{font-size:25px}.daily-strip{min-height:130px;max-height:150px}.hour-row{grid-template-columns:44px 22px 34px 1fr;gap:6px}.stat{padding:6px 8px;gap:7px}}
+      @container(max-width:1180px){.card-grid{grid-template-columns:minmax(250px,30%) minmax(0,1fr);height:var(--weatherwise-card-height,clamp(520px,52cqw,620px))}.center{border-right:0}.right{grid-column:1 / -1;height:220px;border-top:1px solid rgba(255,255,255,0.28);border-radius:0 0 22px 22px}#rmap{height:220px}.daily-strip{min-height:150px;max-height:none}}
       @container(max-width:720px){.card-grid,.card-grid.no-radar{display:flex;flex-direction:column;height:auto;max-height:none}.left,.center{border-right:0;overflow:visible}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{height:300px;min-height:300px}.title{font-size:24px}}
       @media(max-width:760px){.card-grid,.card-grid.no-radar{display:flex;flex-direction:column;height:auto;max-height:none}.left,.center{border-right:0;overflow:visible}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{height:300px;min-height:300px}.title{font-size:24px}}
     `;

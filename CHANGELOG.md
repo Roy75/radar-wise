@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0-beta.4
+
+### Fixed
+
+- Fixed Leaflet radar rendering inside the WeatherWise shadow DOM by embedding the required Leaflet layout styles in the card.
+- Restored wide-card proportions to more closely match the original WeatherWise HTML dashboard.
+- Kept radar as a true right-side panel on wide dashboards instead of switching too early to a bottom row.
+- Tuned daily forecast, center, and left-column spacing to better match the original WeatherWise card.
+
 ## 0.1.0-beta.3
 
 ### Fixed
