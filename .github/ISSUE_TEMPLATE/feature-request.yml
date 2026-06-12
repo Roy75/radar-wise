@@ -29,7 +29,14 @@ body:
     id: region
     attributes:
       label: Region/provider
-      placeholder: US NOAA / Canada / UK / RainViewer / etc.
+      placeholder: US NOAA / Canada / UK / Australia / RainViewer / etc.
+    validations:
+      required: false
+  - type: textarea
+    id: regional_support
+    attributes:
+      label: Regional support details
+      description: If this is for a country or provider WeatherWise does not handle well yet, include the local weather integration, radar source, alert/warning source, and an example of what users in your area expect.
     validations:
       required: false
   - type: textarea

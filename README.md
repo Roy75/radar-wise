@@ -30,6 +30,18 @@ WeatherWise does not ask for, store, or call private weather API keys from dashb
 
 RainViewer is used only as a no-key global radar option. Its public API is for personal, educational, and small community use and may have service or coverage limits.
 
+### Testing Outside the US, Canada, and UK
+
+WeatherWise should still render current conditions and forecasts anywhere Home Assistant has a working `weather` entity. Outside the initial US, Canada, and UK presets, radar falls back to RainViewer and local alert/warning overlays may be limited or unavailable.
+
+If you are testing from Australia, New Zealand, Europe, or any other region, please open a beta report or feature request with:
+
+- Country/region and nearest city or general area
+- Home Assistant weather integration/provider
+- Whether hourly and daily forecasts appear
+- Whether RainViewer radar loads for your area
+- Any local radar, warning, or forecast provider WeatherWise should know about
+
 ## Features
 
 - Custom Lovelace card: `custom:weatherwise-card`
