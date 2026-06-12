@@ -3,7 +3,7 @@
  * Home Assistant weather dashboard card with forecasts and optional radar.
  */
 
-const CARD_VERSION = "0.2.0-beta.6";
+const CARD_VERSION = "0.2.0-beta.7";
 const FORECAST_REFRESH_MS = 15 * 60 * 1000;
 const CARD_TYPES = ["weatherwise-card", "weather-wise-card"];
 
@@ -933,44 +933,44 @@ class WeatherWiseCard extends HTMLElement {
       .card-outer{container-type:inline-size;background:rgba(232,246,250,0.74);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:22px;border:1px solid rgba(255,255,255,0.42);box-shadow:0 4px 28px rgba(0,0,0,0.10);position:relative;overflow:hidden}
       :host([theme-mode="auto"]) .card-outer{background:linear-gradient(135deg,color-mix(in srgb,var(--card-background-color,#fff) 88%,transparent),color-mix(in srgb,var(--primary-color,#2a7a94) 14%,var(--card-background-color,#fff)))}
       .card-outer::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ww-wave) 62%,transparent),transparent)}
-      .card-grid{display:grid;grid-template-columns:minmax(300px,24%) minmax(560px,1fr) minmax(430px,32%);height:var(--weatherwise-card-height,clamp(396px,20cqw,448px));min-height:0;max-height:var(--weatherwise-card-max-height,490px)}
+      .card-grid{display:grid;grid-template-columns:minmax(330px,25%) minmax(620px,1fr) minmax(430px,31%);height:var(--weatherwise-card-height,clamp(440px,22cqw,520px));min-height:0;max-height:var(--weatherwise-card-max-height,560px)}
       .card-grid.no-radar{grid-template-columns:minmax(260px,34%) minmax(0,1fr)}
       .left{min-width:0;display:flex;flex-direction:column;padding:18px 22px 10px;background:linear-gradient(90deg,rgba(255,255,255,0.20),rgba(255,255,255,0.08));border-right:1px solid rgba(255,255,255,0.22);overflow:hidden}
       .clock-row{display:flex;align-items:baseline;gap:8px;line-height:1}
-      .clock-time{font-size:64px;font-weight:500;color:var(--ww-text);letter-spacing:0}
-      .clock-ampm{font-size:18px;font-weight:750;color:var(--ww-muted)}
-      .clock-date{font-size:16px;color:var(--ww-muted);font-weight:800;margin-top:8px;margin-bottom:12px}
-      .section-title,.current-label{font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--ww-muted);font-weight:800;white-space:nowrap}
-      .hourly-left{display:flex;flex:1;min-height:0;flex-direction:column;gap:7px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding-bottom:2px}
+      .clock-time{font-size:78px;font-weight:550;color:var(--ww-text);letter-spacing:0}
+      .clock-ampm{font-size:22px;font-weight:850;color:var(--ww-muted)}
+      .clock-date{font-size:19px;color:var(--ww-muted);font-weight:850;margin-top:10px;margin-bottom:16px}
+      .section-title,.current-label{font-size:16px;letter-spacing:.08em;text-transform:uppercase;color:var(--ww-muted);font-weight:850;white-space:nowrap}
+      .hourly-left{display:flex;flex:1;min-height:0;flex-direction:column;gap:8px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;padding-bottom:2px}
       .hourly-left::-webkit-scrollbar{display:none}
-      .hour-row{display:grid;grid-template-columns:48px 24px 42px 1fr;align-items:center;gap:8px;min-height:28px;padding:3px 8px;border-radius:10px;background:var(--ww-panel);border:1px solid var(--ww-line)}
-      .hour-time-left{font-size:13px;color:var(--ww-muted);font-weight:800;text-transform:uppercase}
-      .hour-icon-left{width:23px;height:23px;display:flex;align-items:center;justify-content:center}
-      .hour-temp-left{font-size:14px;font-weight:850;color:var(--ww-text);text-align:right}
-      .hour-bar-wrap{height:7px;border-radius:999px;background:rgba(18,59,83,0.10);position:relative;overflow:hidden}
+      .hour-row{display:grid;grid-template-columns:54px 26px 48px 1fr;align-items:center;gap:9px;min-height:34px;padding:5px 10px;border-radius:10px;background:var(--ww-panel);border:1px solid var(--ww-line)}
+      .hour-time-left{font-size:15px;color:var(--ww-muted);font-weight:850;text-transform:uppercase}
+      .hour-icon-left{width:25px;height:25px;display:flex;align-items:center;justify-content:center}
+      .hour-temp-left{font-size:16px;font-weight:900;color:var(--ww-text);text-align:right}
+      .hour-bar-wrap{height:8px;border-radius:999px;background:rgba(18,59,83,0.10);position:relative;overflow:hidden}
       .hour-bar-fill{position:absolute;top:0;left:0;height:100%;border-radius:999px;background:linear-gradient(90deg,#58b7c7,var(--ww-wave))}
       .center{min-width:0;display:flex;flex-direction:column;padding:18px 24px;border-right:1px solid rgba(255,255,255,0.22);overflow:hidden}
-      .current-row{display:flex;align-items:center;gap:16px;margin-bottom:10px;min-width:0;overflow:hidden}
-      .current-icon{width:62px;height:62px;flex-shrink:0;display:grid;place-items:center}
+      .current-row{display:flex;align-items:center;gap:18px;margin-bottom:12px;min-width:0;overflow:hidden}
+      .current-icon{width:72px;height:72px;flex-shrink:0;display:grid;place-items:center}
       .cond-block{flex:1;min-width:0}
-      .cond-name{font-size:28px;font-weight:720;color:var(--ww-text);line-height:1.05;overflow-wrap:anywhere}
-      .updated-note{font-size:12px;color:var(--ww-muted);font-weight:800;margin-top:6px;text-transform:uppercase;letter-spacing:.04em}
+      .cond-name{font-size:36px;font-weight:800;color:var(--ww-text);line-height:1.05;overflow-wrap:anywhere}
+      .updated-note{font-size:14px;color:var(--ww-muted);font-weight:850;margin-top:7px;text-transform:uppercase;letter-spacing:.04em}
       .temp-block{text-align:right;flex-shrink:0;min-width:max-content}
-      .temp-now{font-size:52px;font-weight:750;color:var(--ww-text);line-height:1;letter-spacing:0}
-      .temp-hilo{font-size:16px;color:var(--ww-muted);font-weight:700;margin-top:8px}
-      .daily-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;min-height:156px;max-height:188px;margin-bottom:10px;flex:1}
-      .fc-slot{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:8px 6px;background:var(--ww-panel);border-radius:14px;border:1px solid var(--ww-line);min-width:0}
-      .fc-day{font-size:18px;font-weight:800;color:var(--ww-text);text-transform:uppercase;line-height:1.05;text-align:center}
-      .fc-period{font-size:12px;font-weight:850;color:var(--ww-muted);text-transform:uppercase;letter-spacing:.045em;margin-top:2px;min-height:14px;line-height:1.05;text-align:center}
-      .fc-icon{width:54px;height:54px;margin:3px 0 2px;display:flex;align-items:center;justify-content:center}
-      .fc-icon svg{width:50px;height:50px}
-      .fc-temp{font-size:38px;font-weight:850;color:var(--ww-text);letter-spacing:0;line-height:.95}
-      .stats-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:6px;flex-shrink:0}
-      .stat{background:var(--ww-panel);border:1px solid var(--ww-line);border-radius:12px;padding:8px 11px;display:flex;align-items:center;gap:10px;min-height:56px;min-width:0}
-      .stat-ico{width:23px;height:23px;flex:0 0 23px;color:var(--ww-wave)}
-      .stat-ico svg{width:23px;height:23px}
-      .stat-lbl{font-size:10px;color:var(--ww-muted);font-weight:850;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
-      .stat-val{font-size:16px;font-weight:850;color:var(--ww-text);white-space:nowrap}
+      .temp-now{font-size:66px;font-weight:800;color:var(--ww-text);line-height:1;letter-spacing:0}
+      .temp-hilo{font-size:20px;color:var(--ww-muted);font-weight:800;margin-top:9px}
+      .daily-strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;min-height:188px;max-height:232px;margin-bottom:12px;flex:1}
+      .fc-slot{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:10px 8px;background:var(--ww-panel);border-radius:14px;border:1px solid var(--ww-line);min-width:0}
+      .fc-day{font-size:22px;font-weight:850;color:var(--ww-text);text-transform:uppercase;line-height:1.05;text-align:center}
+      .fc-period{font-size:14px;font-weight:900;color:var(--ww-muted);text-transform:uppercase;letter-spacing:.045em;margin-top:2px;min-height:16px;line-height:1.05;text-align:center}
+      .fc-icon{width:64px;height:64px;margin:4px 0 2px;display:flex;align-items:center;justify-content:center}
+      .fc-icon svg{width:60px;height:60px}
+      .fc-temp{font-size:48px;font-weight:900;color:var(--ww-text);letter-spacing:0;line-height:.95}
+      .stats-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:6px;flex-shrink:0}
+      .stat{background:var(--ww-panel);border:1px solid var(--ww-line);border-radius:12px;padding:10px 13px;display:flex;align-items:center;gap:11px;min-height:66px;min-width:0}
+      .stat-ico{width:27px;height:27px;flex:0 0 27px;color:var(--ww-wave)}
+      .stat-ico svg{width:27px;height:27px}
+      .stat-lbl{font-size:12px;color:var(--ww-muted);font-weight:900;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+      .stat-val{font-size:19px;font-weight:900;color:var(--ww-text);white-space:nowrap}
       .right{min-width:0;position:relative;overflow:hidden;border-radius:0 22px 22px 0}
       #rmap{width:100%;height:100%;min-height:0}
       .leaflet-container{height:100%;width:100%;position:relative;overflow:hidden;outline-offset:1px;background:#d7dee2;font-family:inherit;font-size:12px;line-height:1.5;z-index:0}
@@ -1003,7 +1003,7 @@ class WeatherWiseCard extends HTMLElement {
       .debug-panel{margin-top:10px;background:var(--ww-panel);border:1px solid var(--ww-line);border-radius:12px;padding:8px;font-size:12px;color:var(--ww-muted)}
       .debug-row{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
       .debug-row code{color:var(--ww-text)}
-      @container(max-width:1500px){.card-grid{grid-template-columns:minmax(300px,24%) minmax(560px,1fr) minmax(430px,32%)}.left{padding:12px 18px 10px}.center{padding:16px 20px}.clock-time{font-size:58px}.clock-date{font-size:15px}.temp-now{font-size:46px}.cond-name{font-size:25px}.daily-strip{min-height:144px;max-height:170px}.fc-day{font-size:17px}.fc-temp{font-size:36px}.hour-row{grid-template-columns:44px 22px 36px 1fr;gap:6px}.stat{padding:7px 9px;gap:8px}.stat-val{font-size:15px}}
+      @container(max-width:1500px){.card-grid{grid-template-columns:minmax(310px,25%) minmax(570px,1fr) minmax(410px,31%);height:var(--weatherwise-card-height,clamp(420px,23cqw,500px))}.left{padding:14px 18px 10px}.center{padding:16px 20px}.clock-time{font-size:70px}.clock-date{font-size:18px}.section-title,.current-label{font-size:15px}.temp-now{font-size:58px}.temp-hilo{font-size:18px}.cond-name{font-size:32px}.updated-note{font-size:13px}.daily-strip{min-height:172px;max-height:212px}.fc-day{font-size:20px}.fc-period{font-size:13px}.fc-icon{width:58px;height:58px}.fc-icon svg{width:54px;height:54px}.fc-temp{font-size:43px}.hour-row{grid-template-columns:50px 24px 42px 1fr;gap:7px;min-height:32px}.hour-time-left{font-size:14px}.hour-temp-left{font-size:15px}.stat{padding:9px 11px;gap:9px;min-height:62px}.stat-lbl{font-size:11px}.stat-val{font-size:17px}}
       @container(max-width:1180px){.card-grid{grid-template-columns:minmax(250px,30%) minmax(0,1fr);height:var(--weatherwise-card-height,clamp(520px,52cqw,620px))}.center{border-right:0}.right{grid-column:1 / -1;height:220px;border-top:1px solid rgba(255,255,255,0.28);border-radius:0 0 22px 22px}#rmap{height:220px}.daily-strip{min-height:150px;max-height:none}}
       @container(max-width:720px){.card-grid,.card-grid.no-radar{display:flex;flex-direction:column;height:auto;max-height:none}.left,.center{border-right:0;overflow:visible}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{height:300px;min-height:300px}}
       @media(max-width:760px){.card-grid,.card-grid.no-radar{display:flex;flex-direction:column;height:auto;max-height:none}.left,.center{border-right:0;overflow:visible}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{height:300px;min-height:300px}}

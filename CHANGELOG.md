@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0-beta.7
+
+### Changed
+
+- Increased wide-panel card height slightly to prioritize wall-panel readability.
+- Significantly increased clock/date, current condition, forecast, hourly, and stat typography.
+- Enlarged forecast icons, forecast temperatures, and stat tiles for easier reading from across the room.
+
 ## 0.2.0-beta.6
 
 ### Fixed
