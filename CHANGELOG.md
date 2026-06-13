@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.5
+
+### Fixed
+
+- Fixed NWS alert details not opening reliably when tapping the red radar marker.
+- Made the on-map NWS alert chip clickable and keyboard-accessible so it opens the alert details directly.
+- Added a larger invisible touch target around the red alert marker for wall panels and mobile browsers.
+- Added minimal Leaflet popup styling so alert details render clearly without depending on external popup CSS.
+- Added the required Weather.gov User-Agent header to NWS alert requests.
+
 ## 0.3.4
 
 ### Changed

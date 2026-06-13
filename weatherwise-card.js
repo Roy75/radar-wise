@@ -3,7 +3,7 @@
  * Home Assistant weather dashboard card with forecasts and optional radar.
  */
 
-const CARD_VERSION = "0.3.4";
+const CARD_VERSION = "0.3.5";
 const FORECAST_REFRESH_MS = 15 * 60 * 1000;
 const CARD_TYPES = ["weatherwise-card", "weather-wise-card"];
 
@@ -118,6 +118,7 @@ class WeatherWiseCard extends HTMLElement {
     this._radarMap = null;
     this._radarLayers = [];
     this._warningLayer = null;
+    this._warningPopupMarker = null;
     this._radarIndex = 0;
     this._radarPlaying = true;
     this._radarLabelText = "radar loop";
@@ -604,6 +605,7 @@ class WeatherWiseCard extends HTMLElement {
     this._warningLayer?.remove?.();
     this._radarLayers = [];
     this._warningLayer = null;
+    this._warningPopupMarker = null;
     this._radarIndex = 0;
     if (this._radarMap) {
       this._radarMap.remove();
@@ -907,11 +909,22 @@ class WeatherWiseCard extends HTMLElement {
     if (!this._radarMap || !window.L || this._config.show_warning_overlay === false || this._config.country !== "us") return;
     this._warningLayer?.remove?.();
     this._warningLayer = null;
+    this._warningPopupMarker = null;
     const label = this.shadowRoot?.getElementById("radar-lbl");
+    const alert = this.shadowRoot?.getElementById("radar-alert");
+    if (alert) {
+      alert.hidden = true;
+      alert.textContent = "";
+      alert.onclick = null;
+      alert.onkeydown = null;
+    }
     const { lat, lon } = this._latLon();
     try {
       const response = await fetch(`https://api.weather.gov/alerts/active?point=${lat},${lon}`, {
-        headers: { Accept: "application/geo+json" }
+        headers: {
+          "User-Agent": `WeatherWise/${CARD_VERSION} (github.com/TheWillMiller/weather-wise)`,
+          Accept: "application/geo+json"
+        }
       });
       if (!response.ok) throw new Error("NWS alerts unavailable");
       const data = await response.json();
@@ -927,20 +940,45 @@ class WeatherWiseCard extends HTMLElement {
         }).addTo(group);
       }
       const headline = features[0]?.properties?.headline || `${features.length} active weather alert${features.length === 1 ? "" : "s"}`;
-      const alert = this.shadowRoot?.getElementById("radar-alert");
-      window.L.circleMarker([lat, lon], {
+      const popupHtml = this._alertPopup(features[0]?.properties || { headline });
+      const marker = window.L.circleMarker([lat, lon], {
         radius: 9,
         color: "#b91c1c",
         fillColor: "#ef4444",
         fillOpacity: 0.85,
+        interactive: true,
+        bubblingMouseEvents: false,
         weight: 2
-      }).bindPopup(this._escape(headline)).addTo(group);
+      }).bindPopup(popupHtml, { closeButton: true, autoPan: true }).addTo(group);
+      window.L.circleMarker([lat, lon], {
+        radius: 20,
+        color: "#b91c1c",
+        opacity: 0,
+        fillColor: "#ef4444",
+        fillOpacity: 0.01,
+        interactive: true,
+        bubblingMouseEvents: false,
+        weight: 0
+      }).bindPopup(popupHtml, { closeButton: true, autoPan: true }).addTo(group);
+      this._warningPopupMarker = marker;
       this._warningLayer = group.addTo(this._radarMap);
       if (label) label.textContent = `${label.textContent} • ${features.length} alert${features.length === 1 ? "" : "s"}`;
       if (alert) {
         alert.hidden = false;
-        alert.textContent = `${features.length} NWS alert${features.length === 1 ? "" : "s"} - tap red dot`;
+        alert.setAttribute("role", "button");
+        alert.setAttribute("tabindex", "0");
+        alert.textContent = `${features.length} NWS alert${features.length === 1 ? "" : "s"} - tap for details`;
         alert.title = headline;
+        alert.onclick = (event) => {
+          event.stopPropagation();
+          this._warningPopupMarker?.openPopup?.();
+        };
+        alert.onkeydown = (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            this._warningPopupMarker?.openPopup?.();
+          }
+        };
       }
     } catch (err) {
       if (label && this._config.debug?.enabled) label.textContent = `${label.textContent} + alerts unavailable`;
@@ -1283,7 +1321,8 @@ class WeatherWiseCard extends HTMLElement {
       .leaflet-control-zoom a{display:block;text-align:center;text-decoration:none}
       .leaflet-control-attribution{position:absolute;right:0;bottom:0;margin:0;padding:0 5px}
       .radar-lbl{position:absolute;bottom:10px;left:12px;font-size:12px;color:rgba(10,30,46,0.76);background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.55);padding:4px 10px;border-radius:99px;font-weight:800;z-index:1000;pointer-events:none}
-      .radar-alert{position:absolute;top:10px;left:54px;right:126px;max-width:max-content;font-size:12px;color:#7f1d1d;background:rgba(254,242,242,.9);border:1px solid rgba(185,28,28,.28);box-shadow:0 2px 10px rgba(127,29,29,.12);padding:5px 10px;border-radius:99px;font-weight:900;z-index:1000;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .radar-alert{position:absolute;top:10px;left:54px;right:126px;max-width:max-content;font-size:12px;color:#7f1d1d;background:rgba(254,242,242,.9);border:1px solid rgba(185,28,28,.28);box-shadow:0 2px 10px rgba(127,29,29,.12);padding:5px 10px;border-radius:99px;font-weight:900;z-index:1000;pointer-events:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+      .radar-alert:focus-visible{outline:2px solid #b91c1c;outline-offset:2px}
       .radar-alert[hidden]{display:none}
       .radar-controls{position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:1001}
       .radar-controls button{width:31px;height:31px;border:1px solid rgba(255,255,255,.62);border-radius:999px;background:rgba(255,255,255,.78);color:#0a1e2e;box-shadow:0 2px 10px rgba(10,30,46,.12);font:800 15px/1 var(--ha-font-family-body,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif);display:grid;place-items:center;cursor:pointer;padding:0}
@@ -1291,6 +1330,12 @@ class WeatherWiseCard extends HTMLElement {
       .leaflet-control-zoom{border:0!important;box-shadow:0 2px 12px rgba(10,30,46,.13)!important}
       .leaflet-control-zoom a{width:34px!important;height:34px!important;line-height:31px!important;color:#0a1e2e!important;background:rgba(255,255,255,.82)!important;border-color:rgba(10,30,46,.10)!important;font-weight:650!important}
       .leaflet-control-attribution{background:rgba(255,255,255,.70)!important;color:rgba(10,30,46,.72)!important}
+      .leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}
+      .leaflet-popup-content-wrapper{background:rgba(255,255,255,.96);color:#0a1e2e;border-radius:12px;box-shadow:0 4px 18px rgba(10,30,46,.22);border:1px solid rgba(10,30,46,.12);padding:1px;text-align:left}
+      .leaflet-popup-content{font-size:13px;line-height:1.35;margin:12px 14px;min-width:180px;max-width:260px}
+      .leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin-left:-20px;overflow:hidden;pointer-events:none}
+      .leaflet-popup-tip{width:14px;height:14px;padding:1px;margin:-8px auto 0;background:rgba(255,255,255,.96);transform:rotate(45deg);box-shadow:0 4px 14px rgba(10,30,46,.18)}
+      .leaflet-popup-close-button{position:absolute;top:4px;right:8px;border:0;background:transparent;color:#0a1e2e;text-decoration:none;font-size:18px;font-weight:900;line-height:1;cursor:pointer}
       .loading-note{font-size:12px;color:var(--ww-muted);font-weight:800;opacity:.8;padding:10px}
       .daily-strip>.loading-note{grid-column:1 / -1;align-self:center}
       .debug-panel{margin-top:10px;background:var(--ww-panel);border:1px solid var(--ww-line);border-radius:12px;padding:8px;font-size:12px;color:var(--ww-muted)}
