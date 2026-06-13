@@ -5,9 +5,9 @@
 [![GitHub stars](https://img.shields.io/github/stars/TheWillMiller/weather-wise?label=stars)](https://github.com/TheWillMiller/weather-wise/stargazers)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-yellow?logo=buymeacoffee)](https://buymeacoffee.com/thewillmiller)
 
-**Latest release:** `v0.4.1`
+**Latest release:** `v0.4.2`
 
-WeatherWise is a Home Assistant dashboard (Lovelace) custom card for current weather, hourly and daily forecasts, precipitation details, sunrise and sunset, wind, humidity, and optional radar. It follows the TideWise/RiverWise visual language while staying a dashboard card, not a backend integration.
+WeatherWise is a Home Assistant dashboard (Lovelace) custom card for current weather, hourly and daily forecasts, precipitation details, sunrise and sunset, wind, humidity, dew point, and optional radar. It follows the TideWise/RiverWise visual language while staying a dashboard card, not a backend integration.
 
 ![WeatherWise dashboard preview](https://raw.githubusercontent.com/TheWillMiller/weather-wise/main/docs/preview.png)
 
@@ -52,6 +52,7 @@ If you are testing from Australia, New Zealand, Europe, or any other region, ple
 - Existing `weather` entity support
 - Optional local temperature sensor override
 - Optional humidity sensor fallback
+- Optional dew point sensor fallback
 - Optional localized forecast summary ticker
 - Hourly forecast strip
 - Daily or twice-daily forecast cards
@@ -128,7 +129,7 @@ type: module
 For quick testing before installing locally, you can add this dashboard resource:
 
 ```yaml
-url: https://cdn.jsdelivr.net/gh/TheWillMiller/weather-wise@v0.4.1/weatherwise-card.js
+url: https://cdn.jsdelivr.net/gh/TheWillMiller/weather-wise@v0.4.2/weatherwise-card.js
 type: module
 ```
 
@@ -211,6 +212,7 @@ WeatherWise includes a Home Assistant visual editor. When adding the card from t
 - Choose a Home Assistant weather entity
 - Choose an optional local temperature sensor when the weather entity is not local enough
 - Choose an optional humidity sensor when the weather entity does not expose humidity
+- Choose an optional dew point sensor when the weather entity does not expose dew point
 - Choose United States, Canada, United Kingdom, or global/other setup
 - Choose automatic radar, NOAA radar, RainViewer radar, or no radar
 - Choose radar timeline, style, map style, and radar loop speed
@@ -251,6 +253,7 @@ Radar location and map controls:
 | `entity` | Yes |  | Home Assistant `weather` entity. |
 | `temperature_entity` | No |  | Optional temperature sensor/helper entity for the current displayed temperature. Useful when an indoor, patio, or hyperlocal sensor differs from the weather provider. |
 | `humidity_entity` | No |  | Optional humidity sensor/helper entity. Useful when the weather entity has no humidity attribute. |
+| `dew_point_entity` | No |  | Optional dew point sensor/helper entity. WeatherWise also auto-reads common dew point attributes from the weather entity when available. |
 | `title` | No | `Local Weather` | Card title. |
 | `country` | No | `us` | Region hint: `us`, `ca`, `uk`, or `global`. |
 | `radar_provider` | No | `auto` | `auto`, `noaa`, `envcanada`, `rainviewer`, or `none`. |
@@ -336,6 +339,12 @@ The red radar dot appears when the US NWS warning overlay finds an active alert 
 1. Check whether the selected weather entity exposes a humidity attribute.
 2. If it does not, choose a humidity sensor in the visual editor.
 3. Or set `humidity_entity: sensor.your_humidity_sensor` in YAML.
+
+### Dew point shows `--`
+
+1. Check whether the selected weather entity exposes a dew point attribute.
+2. If it does not, choose a dew point sensor in the visual editor.
+3. Or set `dew_point_entity: sensor.your_dew_point_sensor` in YAML.
 
 ### What do the blue bars show?
 

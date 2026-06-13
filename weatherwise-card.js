@@ -3,7 +3,7 @@
  * Home Assistant weather dashboard card with forecasts and optional radar.
  */
 
-const CARD_VERSION = "0.4.1";
+const CARD_VERSION = "0.4.2";
 const FORECAST_REFRESH_MS = 15 * 60 * 1000;
 const CARD_TYPES = ["weatherwise-card", "weather-wise-card"];
 
@@ -73,6 +73,7 @@ const WEATHERWISE_TEXT = {
     dayPeriod: "Day",
     nightPeriod: "Night",
     humidity: "Humidity",
+    dewPoint: "Dew Point",
     wind: "Wind",
     sunrise: "Sunrise",
     sunset: "Sunset",
@@ -134,6 +135,7 @@ const WEATHERWISE_TEXT = {
     dayPeriod: "Jour",
     nightPeriod: "Nuit",
     humidity: "Humidité",
+    dewPoint: "Point de rosée",
     wind: "Vent",
     sunrise: "Lever du soleil",
     sunset: "Coucher du soleil",
@@ -195,6 +197,7 @@ const WEATHERWISE_TEXT = {
     dayPeriod: "Día",
     nightPeriod: "Noche",
     humidity: "Humedad",
+    dewPoint: "Punto de rocío",
     wind: "Viento",
     sunrise: "Amanecer",
     sunset: "Atardecer",
@@ -256,6 +259,7 @@ const WEATHERWISE_TEXT = {
     dayPeriod: "Tag",
     nightPeriod: "Nacht",
     humidity: "Luftfeuchtigkeit",
+    dewPoint: "Taupunkt",
     wind: "Wind",
     sunrise: "Sonnenaufgang",
     sunset: "Sonnenuntergang",
@@ -317,6 +321,7 @@ const WEATHERWISE_TEXT = {
     dayPeriod: "Dia",
     nightPeriod: "Noite",
     humidity: "Humidade",
+    dewPoint: "Ponto de orvalho",
     wind: "Vento",
     sunrise: "Nascer do sol",
     sunset: "Pôr do sol",
@@ -393,6 +398,21 @@ function isWeatherWiseTemperatureEntity(entityId, state) {
   return deviceClass === "temperature" || unit.includes("°") || unit === "c" || unit === "f" || id.includes("temp") || friendly.includes("temp");
 }
 
+function isWeatherWiseDewPointEntity(entityId, state) {
+  if (!entityId) return false;
+  const attrs = state?.attributes || {};
+  const friendly = String(attrs.friendly_name || "").toLowerCase();
+  const deviceClass = String(attrs.device_class || "").toLowerCase();
+  const unit = String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || "").toLowerCase();
+  const id = String(entityId).toLowerCase();
+  const looksLikeTemperature = deviceClass === "temperature" || unit.includes("°") || unit === "c" || unit === "f";
+  return id.includes("dew_point")
+    || id.includes("dewpoint")
+    || friendly.includes("dew point")
+    || friendly.includes("dewpoint")
+    || (looksLikeTemperature && (id.includes("dew") || friendly.includes("dew")));
+}
+
 class WeatherWiseCard extends HTMLElement {
   static getStubConfig() {
     return {
@@ -400,6 +420,7 @@ class WeatherWiseCard extends HTMLElement {
       entity: "weather.home",
       humidity_entity: "",
       temperature_entity: "",
+      dew_point_entity: "",
       title: "Local Weather",
       country: "us",
       radar_provider: "auto",
@@ -575,6 +596,7 @@ class WeatherWiseCard extends HTMLElement {
       title: "Local Weather",
       humidity_entity: "",
       temperature_entity: "",
+      dew_point_entity: "",
       country: WEATHERWISE_COUNTRIES[country] ? country : "global",
       radar_provider: WEATHERWISE_RADAR[radarProvider] ? radarProvider : "auto",
       theme_mode: themeMode,
@@ -645,12 +667,15 @@ class WeatherWiseCard extends HTMLElement {
       entity: this._config.entity,
       humidityEntity: this._config.humidity_entity,
       temperatureEntity: this._config.temperature_entity,
+      dewPointEntity: this._config.dew_point_entity,
       state: stateObj?.state,
       updated: stateObj?.last_updated,
       temp: attrs.temperature,
       temperatureState: this._config.temperature_entity ? this._hass?.states?.[this._config.temperature_entity]?.state : undefined,
       humidity: attrs.humidity,
       humidityState: this._config.humidity_entity ? this._hass?.states?.[this._config.humidity_entity]?.state : undefined,
+      dewPoint: attrs.dew_point ?? attrs.dewpoint ?? attrs.dewPoint,
+      dewPointState: this._config.dew_point_entity ? this._hass?.states?.[this._config.dew_point_entity]?.state : undefined,
       wind: attrs.wind_speed,
       bearing: attrs.wind_bearing,
       forecast: [
@@ -756,6 +781,7 @@ class WeatherWiseCard extends HTMLElement {
     const units = this._unitContext(attrs);
     const temp = this._displayTemp(this._currentTemperature(attrs), units);
     const humidity = this._humidity(attrs);
+    const dewPoint = this._dewPoint(attrs, units);
     const wind = this._formatWind(attrs, units);
     const hourly = this._forecasts.hourly || [];
     const daily = this._forecasts.daily || [];
@@ -814,6 +840,7 @@ class WeatherWiseCard extends HTMLElement {
               ${this._config.show_forecast === false ? "" : `<div class="daily-strip">${this._renderDaily(mainPeriods, units)}</div>`}
               <div class="stats-row">
                 ${this._stat("humidity", text.humidity, `${humidity}%`)}
+                ${this._stat("dewpoint", text.dewPoint, dewPoint)}
                 ${this._stat("wind", text.wind, wind)}
                 ${this._stat("sunrise", text.sunrise, this._shortTime(sun.next_rising))}
                 ${this._stat("sunset", text.sunset, this._shortTime(sun.next_setting))}
@@ -882,6 +909,9 @@ class WeatherWiseCard extends HTMLElement {
     const rows = [
       ["Version", CARD_VERSION],
       ["Entity", this._config.entity],
+      ["Temperature entity", this._config.temperature_entity || "auto"],
+      ["Humidity entity", this._config.humidity_entity || "auto"],
+      ["Dew point entity", this._config.dew_point_entity || "auto"],
       ["Country", this._config.country],
       ["Radar", data.provider],
       ["Units", data.units.temperatureUnit],
@@ -1041,6 +1071,7 @@ class WeatherWiseCard extends HTMLElement {
   _stat(kind, label, value) {
     const icons = {
       humidity: `<svg viewBox="0 0 24 24" fill="none"><path d="M12 3s6 6.1 6 11a6 6 0 1 1-12 0c0-4.9 6-11 6-11Z" fill="#65b8df"/><path d="M9.2 16.4c.7 1.3 1.8 2 3.4 2" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+      dewpoint: `<svg viewBox="0 0 24 24" fill="none"><path d="M8 3s4.5 4.8 4.5 8.4a4.5 4.5 0 1 1-9 0C3.5 7.8 8 3 8 3Z" fill="#65b8df"/><path d="M16.5 4.5v8.2a3.7 3.7 0 1 1-3 0V4.5a1.5 1.5 0 0 1 3 0Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M16.5 16.4h.01" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/></svg>`,
       wind: `<svg viewBox="0 0 24 24" fill="none"><path d="M4 8h10.4a3 3 0 1 0-2.6-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M3 13h15.4a3 3 0 1 1-2.6 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 18h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
       sunrise: `<svg viewBox="0 0 24 24" fill="none"><path d="M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 15a5 5 0 0 1 10 0" fill="#fbbf24"/><path d="M12 4v4M5 11l3 1M19 11l-3 1" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/></svg>`,
       sunset: `<svg viewBox="0 0 24 24" fill="none"><path d="M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 15a5 5 0 0 1 10 0" fill="#f59e0b"/><path d="M12 8V4M5 11l3 1M19 11l-3 1" stroke="#7c3aed" stroke-width="2" stroke-linecap="round"/></svg>`
@@ -1672,6 +1703,27 @@ class WeatherWiseCard extends HTMLElement {
     return Number.isFinite(value) ? String(Math.round(value)) : "--";
   }
 
+  _dewPoint(attrs, units) {
+    const configuredEntityId = this._config.dew_point_entity;
+    const configuredState = configuredEntityId ? this._hass?.states?.[configuredEntityId] : null;
+    if (configuredState && isWeatherWiseDewPointEntity(configuredEntityId, configuredState)) {
+      return this._displayTemp({
+        value: configuredState.state,
+        unit: configuredState.attributes?.unit_of_measurement || configuredState.attributes?.native_unit_of_measurement || this._hass?.config?.unit_system?.temperature
+      }, units, false);
+    }
+    const value = [
+      attrs.dew_point,
+      attrs.dewpoint,
+      attrs.dewPoint,
+      attrs.native_dew_point,
+      attrs.native_dewpoint,
+      attrs.dew_point_temperature,
+      attrs.dewpoint_temperature
+    ].find((item) => item !== undefined && item !== null && item !== "");
+    return value === undefined ? "--" : this._displayTemp(value, units, false);
+  }
+
   _latLon() {
     return {
       lat: this._numberOr(this._config.latitude, this._numberOr(this._hass?.config?.latitude, 0)),
@@ -1815,7 +1867,7 @@ class WeatherWiseCard extends HTMLElement {
       .fc-icon svg{width:60px;height:60px}
       .fc-temp{font-size:48px;font-weight:900;color:var(--ww-text);letter-spacing:0;line-height:.95}
       .fc-precip{font-size:12px;font-weight:900;color:var(--ww-muted);line-height:1;min-height:13px;text-align:center;white-space:nowrap}
-      .stats-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:6px;flex-shrink:0}
+      .stats-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:6px;flex-shrink:0}
       .stat{background:var(--ww-panel);border:1px solid var(--ww-line);border-radius:12px;padding:10px 13px;display:flex;align-items:center;gap:11px;min-height:66px;min-width:0}
       .stat>div:last-child{min-width:0}
       .stat-ico{width:27px;height:27px;flex:0 0 27px;color:var(--ww-wave)}
@@ -1967,10 +2019,14 @@ class WeatherWiseCardEditor extends HTMLElement {
     return this._sensorEntities(isWeatherWiseTemperatureEntity);
   }
 
+  _dewPointEntities() {
+    return this._sensorEntities(isWeatherWiseDewPointEntity);
+  }
+
   _editorEntitySignature() {
     const states = this._hass?.states || {};
     return Object.entries(states)
-      .filter(([entityId, state]) => entityId.startsWith("weather.") || isWeatherWiseHumidityEntity(entityId, state) || isWeatherWiseTemperatureEntity(entityId, state))
+      .filter(([entityId, state]) => entityId.startsWith("weather.") || isWeatherWiseHumidityEntity(entityId, state) || isWeatherWiseTemperatureEntity(entityId, state) || isWeatherWiseDewPointEntity(entityId, state))
       .map(([entityId, state]) => `${entityId}:${state.attributes?.friendly_name || ""}:${state.attributes?.device_class || ""}`)
       .sort()
       .join("|");
@@ -1998,9 +2054,11 @@ class WeatherWiseCardEditor extends HTMLElement {
     const entities = this._weatherEntities();
     const humiditySensors = this._humidityEntities();
     const temperatureSensors = this._temperatureEntities();
+    const dewPointSensors = this._dewPointEntities();
     const hasConfiguredEntity = entities.some(([entityId]) => entityId === config.entity);
     const hasConfiguredHumidityEntity = humiditySensors.some(([entityId]) => entityId === config.humidity_entity);
     const hasConfiguredTemperatureEntity = temperatureSensors.some(([entityId]) => entityId === config.temperature_entity);
+    const hasConfiguredDewPointEntity = dewPointSensors.some(([entityId]) => entityId === config.dew_point_entity);
     const configuredOption = config.entity && !hasConfiguredEntity
       ? `<option value="${_wwEscape(config.entity)}" selected>${_wwEscape(config.entity)}</option>`
       : "";
@@ -2009,6 +2067,9 @@ class WeatherWiseCardEditor extends HTMLElement {
       : "";
     const configuredTemperatureOption = config.temperature_entity && !hasConfiguredTemperatureEntity && isWeatherWiseTemperatureEntity(config.temperature_entity, this._hass?.states?.[config.temperature_entity])
       ? `<option value="${_wwEscape(config.temperature_entity)}" selected>${_wwEscape(config.temperature_entity)}</option>`
+      : "";
+    const configuredDewPointOption = config.dew_point_entity && !hasConfiguredDewPointEntity && isWeatherWiseDewPointEntity(config.dew_point_entity, this._hass?.states?.[config.dew_point_entity])
+      ? `<option value="${_wwEscape(config.dew_point_entity)}" selected>${_wwEscape(config.dew_point_entity)}</option>`
       : "";
     const weatherOptions = entities.map(([entityId, state]) => {
       const name = state.attributes?.friendly_name || entityId;
@@ -2021,6 +2082,10 @@ class WeatherWiseCardEditor extends HTMLElement {
     const humidityOptions = humiditySensors.map(([entityId, state]) => {
       const name = state.attributes?.friendly_name || entityId;
       return `<option value="${_wwEscape(entityId)}" ${config.humidity_entity === entityId ? "selected" : ""}>${_wwEscape(name)} (${_wwEscape(entityId)})</option>`;
+    }).join("");
+    const dewPointOptions = dewPointSensors.map(([entityId, state]) => {
+      const name = state.attributes?.friendly_name || entityId;
+      return `<option value="${_wwEscape(entityId)}" ${config.dew_point_entity === entityId ? "selected" : ""}>${_wwEscape(name)} (${_wwEscape(entityId)})</option>`;
     }).join("");
     this.shadowRoot.innerHTML = `
       <style>
@@ -2084,7 +2149,14 @@ class WeatherWiseCardEditor extends HTMLElement {
               ${humidityOptions}
             </select>
           </label>
-          <div class="hint">WeatherWise reads an existing Home Assistant weather entity and calls Home Assistant's forecast service. Use local temperature or humidity sensors when your weather entity differs from the spot you care about.</div>
+          <label>Dew point entity
+            <select id="dew_point_entity">
+              <option value="">Auto from weather entity</option>
+              ${configuredDewPointOption}
+              ${dewPointOptions}
+            </select>
+          </label>
+          <div class="hint">WeatherWise reads an existing Home Assistant weather entity and calls Home Assistant's forecast service. Use local temperature, humidity, or dew point sensors when your weather entity differs from the spot you care about.</div>
         </div>
         <div class="section">
           <div class="section-title">Region and radar</div>
@@ -2304,7 +2376,7 @@ class WeatherWiseCardEditor extends HTMLElement {
         </div>
       </div>
     `;
-    ["entity", "temperature_entity", "humidity_entity", "country", "radar_provider", "radar_style", "radar_basemap", "radar_timeline", "title", "units", "theme_mode", "language", "latitude", "longitude", "hourly_count", "forecast_count", "radar_zoom", "radar_speed"].forEach((id) => {
+    ["entity", "temperature_entity", "humidity_entity", "dew_point_entity", "country", "radar_provider", "radar_style", "radar_basemap", "radar_timeline", "title", "units", "theme_mode", "language", "latitude", "longitude", "hourly_count", "forecast_count", "radar_zoom", "radar_speed"].forEach((id) => {
       this.shadowRoot.getElementById(id)?.addEventListener("change", (event) => this._setValue(id, event.target.value));
     });
     ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay", "show_animations", "show_timeline", "show_forecast", "show_forecast_summary", "timeline_autoscroll"].forEach((id) => {

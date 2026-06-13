@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.2
+
+### Added
+
+- Added dew point support as a fifth detail tile beside humidity, wind, sunrise, and sunset.
+- Added automatic dew point detection from common weather entity attributes.
+- Added optional `dew_point_entity` support and a visual editor picker for dedicated dew point sensors.
+
+### Changed
+
+- Updated README, HACS submission notes, and tester templates for the `v0.4.2` release.
+
 ## 0.4.1
 
 ### Changed
