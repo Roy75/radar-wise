@@ -3,7 +3,7 @@
  * Home Assistant weather dashboard card with forecasts and optional radar.
  */
 
-const CARD_VERSION = "0.3.7";
+const CARD_VERSION = "0.4.0";
 const FORECAST_REFRESH_MS = 15 * 60 * 1000;
 const CARD_TYPES = ["weatherwise-card", "weather-wise-card"];
 
@@ -44,7 +44,8 @@ const WEATHERWISE_LAYOUTS = {
   auto: "Auto",
   wide_panel: "Wide panel",
   stacked: "Stacked",
-  compact: "Compact"
+  compact: "Compact",
+  radar_bottom: "Radar bottom"
 };
 
 const WEATHERWISE_LANGUAGES = {
@@ -364,6 +365,16 @@ const WEATHERWISE_TEXT = {
   }
 };
 
+function _wwEscape(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
 function isWeatherWiseHumidityEntity(entityId, state) {
   if (!entityId) return false;
   const friendly = String(state?.attributes?.friendly_name || "").toLowerCase();
@@ -402,12 +413,17 @@ class WeatherWiseCard extends HTMLElement {
       show_forecast: true,
       show_forecast_summary: true,
       show_radar: true,
+      show_map_controls: true,
       radar_controls: true,
       radar_style: "standard",
       radar_basemap: "light",
       radar_timeline: "loop",
       show_warning_overlay: true,
       show_animations: true,
+      panel_order: ["clock", "weather", "radar"],
+      column_widths: [25, 50, 25],
+      timeline_autoscroll: false,
+      stack_below: 0,
       latitude: 33.688,
       longitude: -78.886,
       grid_options: {
@@ -443,6 +459,11 @@ class WeatherWiseCard extends HTMLElement {
     this._radarLabelText = "radar loop";
     this._radarProviderRendered = "";
     this._radarResizeObserver = null;
+    this._cardResizeObserver = null;
+    this._timelineScrollRaf = null;
+    this._timelineScrollDir = 1;
+    this._timelineScrollPauseUntil = 0;
+    this._timelineScrollLast = null;
   }
 
   connectedCallback() {
@@ -458,6 +479,9 @@ class WeatherWiseCard extends HTMLElement {
     window.clearInterval(this._forecastRefreshTimer);
     this._forecastRefreshTimer = null;
     this._teardownRadar();
+    this._stopTimelineScroll();
+    this._cardResizeObserver?.disconnect?.();
+    this._cardResizeObserver = null;
   }
 
   setConfig(config) {
@@ -555,8 +579,6 @@ class WeatherWiseCard extends HTMLElement {
       radar_provider: WEATHERWISE_RADAR[radarProvider] ? radarProvider : "auto",
       theme_mode: themeMode,
       units,
-      language: "auto",
-      layout: "auto",
       hourly_count: 5,
       forecast_count: 5,
       show_timeline: true,
@@ -591,6 +613,27 @@ class WeatherWiseCard extends HTMLElement {
       radar_controls: config.radar_controls !== false,
       show_warning_overlay: config.show_warning_overlay !== false,
       show_animations: config.show_animations !== false,
+      panel_order: (() => {
+        const def = ["clock", "weather", "radar"];
+        const o = config.panel_order;
+        if (!Array.isArray(o) || o.length !== 3) return def;
+        return [...o].sort().join(",") === "clock,radar,weather" ? o : def;
+      })(),
+      column_widths: (() => {
+        const def = [25, 50, 25];
+        const w = config.column_widths;
+        if (!Array.isArray(w) || w.length !== 3) return def;
+        const nums = w.map((v) => Number(v) || 0);
+        const sum = nums.reduce((a, b) => a + b, 0);
+        // Migrate old fr-weight format (e.g. [1,2,1]) — sums are always < 60
+        if (sum < 60) {
+          const total = sum || 4;
+          return nums.map((v) => Math.max(20, Math.min(60, Math.round((v / total * 100) / 5) * 5)));
+        }
+        return nums.map((v) => Math.max(20, Math.min(60, Math.round(v / 5) * 5)));
+      })(),
+      timeline_autoscroll: config.timeline_autoscroll === true,
+      stack_below: Math.max(0, Math.round(Number(config.stack_below) || 0)),
       radar_speed: Math.max(300, Math.min(3000, Number(config.radar_speed) || 700))
     };
   }
@@ -633,7 +676,10 @@ class WeatherWiseCard extends HTMLElement {
         this._config.radar_controls,
         this._config.show_warning_overlay,
         this._config.hourly_count,
-        this._config.forecast_count
+        this._config.forecast_count,
+        (this._config.panel_order || []).join(","),
+        (this._config.column_widths || []).join(","),
+        this._config.timeline_autoscroll
       ]
     });
   }
@@ -700,6 +746,7 @@ class WeatherWiseCard extends HTMLElement {
 
   _render() {
     if (!this.shadowRoot) return;
+    this._stopTimelineScroll();
     const text = this._texts();
     const stateObj = this._hass?.states?.[this._config.entity];
     const attrs = stateObj?.attributes || {};
@@ -729,28 +776,28 @@ class WeatherWiseCard extends HTMLElement {
       <style>${this._styles()}</style>
       <ha-card>
         <div class="card-outer">
-          <div class="card-grid layout-${this._escape(layout)} ${this._config.show_radar && provider !== "none" ? "" : "no-radar"} ${this._config.show_timeline === false ? "no-timeline" : ""} ${this._config.show_forecast === false ? "no-forecast" : ""}" style="--ww-hourly-count:${Math.max(1, Math.min(24, Number(this._config.hourly_count) || 5))};--ww-forecast-count:${Math.max(1, Math.min(7, Number(this._config.forecast_count) || 5))}">
-            <section class="left">
+          <div class="card-grid layout-${_wwEscape(layout)} ${this._config.show_radar && provider !== "none" ? "" : "no-radar"} ${this._config.show_timeline === false ? "no-timeline" : ""} ${this._config.show_forecast === false ? "no-forecast" : ""}" style="${(() => { const w = this._config.column_widths || [1,2,1]; return `--ww-col1:${w[0]}fr;--ww-col2:${w[1]}fr;--ww-col3:${w[2]}fr;`; })()}--ww-hourly-count:${Math.max(1, Math.min(24, Number(this._config.hourly_count) || 5))};--ww-forecast-count:${Math.max(1, Math.min(7, Number(this._config.forecast_count) || 5))}">
+            <section class="left" style="order:${this._sectionOrder("clock")}">
               <div class="clock-panel">
                 <div class="clock-row">
                   <div class="clock-time" id="clock-time">${this._clockTime(now)}</div>
                   <div class="clock-ampm" id="clock-ampm">${now.getHours() >= 12 ? this._t("pm") : this._t("am")}</div>
                 </div>
                 <div class="clock-date" id="clock-date">${this._longDate(now)}</div>
-                ${this._config.show_forecast_summary === false ? "" : `<div class="forecast-summary" title="${this._escape(forecastSummary)}"><span class="forecast-summary-text">${this._escape(forecastSummary)}</span></div>`}
+                ${this._config.show_forecast_summary === false ? "" : `<div class="forecast-summary" title="${_wwEscape(forecastSummary)}"><span class="forecast-summary-text">${_wwEscape(forecastSummary)}</span></div>`}
               </div>
               ${this._config.show_timeline === false ? "" : `
                 <div class="section-title">${this._timelineTitle(timelineMode)}</div>
                 <div class="hourly-left">${this._renderTimeline(timeline, units, timelineMode)}</div>
               `}
             </section>
-            <section class="center">
+            <section class="center" style="order:${this._sectionOrder("weather")}">
               <div class="current-row">
                 <div class="current-icon">${this._icon(displayCondition, 62)}</div>
                 <div class="cond-block">
-                  <div class="current-label">${this._escape(text.currentWeather)}</div>
-                  <div class="cond-name">${needsEntity ? this._escape(text.selectWeatherEntity) : unavailable ? this._escape(text.connectWeather) : this._escape(this._conditionLabel(displayCondition))}</div>
-                  <div class="updated-note">${needsEntity ? this._escape(text.openEditor) : unavailable ? this._escape(text.waitingLive) : `${this._escape(text.updated)} ${this._shortTime(now)}`}</div>
+                  <div class="current-label">${_wwEscape(text.currentWeather)}</div>
+                  <div class="cond-name">${needsEntity ? _wwEscape(text.selectWeatherEntity) : unavailable ? _wwEscape(text.connectWeather) : _wwEscape(this._conditionLabel(displayCondition))}</div>
+                  <div class="updated-note">${needsEntity ? _wwEscape(text.openEditor) : unavailable ? _wwEscape(text.waitingLive) : `${_wwEscape(text.updated)} ${this._shortTime(now)}`}</div>
                 </div>
                 <div class="temp-block">
                   <div class="temp-now">${temp}</div>
@@ -767,16 +814,16 @@ class WeatherWiseCard extends HTMLElement {
               ${this._renderDebug({ stateObj, hourly, daily, twiceDaily, provider, units })}
             </section>
             ${this._config.show_radar && provider !== "none" ? `
-              <section class="right">
+              <section class="right" style="order:${this._sectionOrder("radar")}">
                 <div id="rmap"></div>
                 ${this._config.radar_controls === false ? "" : `
                   <div class="radar-controls" aria-label="Radar playback controls">
-                    <button type="button" data-radar-action="prev" title="${this._escape(text.previousRadarFrame)}" aria-label="${this._escape(text.previousRadarFrame)}">&lt;</button>
-                    <button type="button" data-radar-action="play" title="${this._escape(text.pauseRadarLoop)}" aria-label="${this._escape(text.pauseRadarLoop)}">||</button>
-                    <button type="button" data-radar-action="next" title="${this._escape(text.nextRadarFrame)}" aria-label="${this._escape(text.nextRadarFrame)}">&gt;</button>
+                    <button type="button" data-radar-action="prev" title="${_wwEscape(text.previousRadarFrame)}" aria-label="${_wwEscape(text.previousRadarFrame)}">&lt;</button>
+                    <button type="button" data-radar-action="play" title="${_wwEscape(text.pauseRadarLoop)}" aria-label="${_wwEscape(text.pauseRadarLoop)}">||</button>
+                    <button type="button" data-radar-action="next" title="${_wwEscape(text.nextRadarFrame)}" aria-label="${_wwEscape(text.nextRadarFrame)}">&gt;</button>
                   </div>
                 `}
-                <div class="radar-lbl" id="radar-lbl">${this._escape(text.radarLoading)}</div>
+                <div class="radar-lbl" id="radar-lbl">${_wwEscape(text.radarLoading)}</div>
                 <div class="radar-alert" id="radar-alert" hidden></div>
               </section>
             ` : ""}
@@ -792,6 +839,10 @@ class WeatherWiseCard extends HTMLElement {
       window.requestAnimationFrame(() => this._scheduleRadarInit(provider));
     }
     this._updateClock();
+    if (this._config.timeline_autoscroll && this._config.show_timeline !== false) {
+      window.setTimeout(() => this._startTimelineScroll(), 400);
+    }
+    this._setupCardResizeObserver();
   }
 
   _wireRadarControls() {
@@ -835,7 +886,7 @@ class WeatherWiseCard extends HTMLElement {
     return `
       <details class="debug-panel">
         <summary>Debug</summary>
-        ${rows.map(([key, value]) => `<div class="debug-row"><span>${key}</span><code>${this._escape(value)}</code></div>`).join("")}
+        ${rows.map(([key, value]) => `<div class="debug-row"><span>${key}</span><code>${_wwEscape(value)}</code></div>`).join("")}
       </details>
     `;
   }
@@ -857,7 +908,7 @@ class WeatherWiseCard extends HTMLElement {
   }
 
   _renderTimeline(periods, units, mode = "hourly") {
-    if (!periods.length) return `<div class="loading-note">${this._escape(this._t("waitingForecast"))}</div>`;
+    if (!periods.length) return `<div class="loading-note">${_wwEscape(this._t("waitingForecast"))}</div>`;
     const slice = periods.slice(0, Number(this._config.hourly_count) || 5);
     const temps = slice.map((item) => this._tempValue(item.temperature, units)).filter(Number.isFinite);
     const min = temps.length ? Math.min(...temps) : 0;
@@ -871,7 +922,7 @@ class WeatherWiseCard extends HTMLElement {
           <div class="hour-time-left">${this._timelineTime(item, mode)}</div>
           <div class="hour-icon-left">${this._icon(item.condition || item.state, 23)}</div>
           <div class="hour-temp-left">${this._displayTemp(item.temperature, units, false)}</div>
-          <div class="hour-bar-wrap" title="${this._escape(this._t("relativeTemp"))}"><div class="hour-bar-fill" style="width:${pct}%"></div></div>
+          <div class="hour-bar-wrap" title="${_wwEscape(this._t("relativeTemp"))}"><div class="hour-bar-fill" style="width:${pct}%"></div></div>
           <div class="hour-precip">${this._formatPrecip(item, units)}</div>
         </div>
       `;
@@ -886,7 +937,7 @@ class WeatherWiseCard extends HTMLElement {
   }
 
   _renderDaily(periods, units) {
-    if (!periods.length) return `<div class="loading-note">${this._escape(this._t("waitingForecast"))}</div>`;
+    if (!periods.length) return `<div class="loading-note">${_wwEscape(this._t("waitingForecast"))}</div>`;
     return periods.slice(0, Number(this._config.forecast_count) || 5).map((item) => {
       const period = item.is_daytime === undefined ? "" : item.is_daytime ? this._t("dayPeriod") : this._t("nightPeriod");
       return `
@@ -951,9 +1002,12 @@ class WeatherWiseCard extends HTMLElement {
   }
 
   _firstNightPeriod(twiceDaily, daily) {
-    return (twiceDaily || []).find((item) => item.is_daytime === false || /night/i.test(String(item.name || "")))
-      || daily?.[0]
-      || null;
+    const fromTwiceDaily = (twiceDaily || []).find(
+      (item) => item.is_daytime === false || /night/i.test(String(item.name || ""))
+    );
+    if (fromTwiceDaily) return fromTwiceDaily;
+    const d = daily?.[0];
+    return (d && (d.templow != null || d.low_temperature != null)) ? d : null;
   }
 
   _tomorrowPeriod(twiceDaily, daily, hourly) {
@@ -984,7 +1038,7 @@ class WeatherWiseCard extends HTMLElement {
       sunrise: `<svg viewBox="0 0 24 24" fill="none"><path d="M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 15a5 5 0 0 1 10 0" fill="#fbbf24"/><path d="M12 4v4M5 11l3 1M19 11l-3 1" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/></svg>`,
       sunset: `<svg viewBox="0 0 24 24" fill="none"><path d="M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 15a5 5 0 0 1 10 0" fill="#f59e0b"/><path d="M12 8V4M5 11l3 1M19 11l-3 1" stroke="#7c3aed" stroke-width="2" stroke-linecap="round"/></svg>`
     };
-    return `<div class="stat"><div class="stat-ico" aria-hidden="true">${icons[kind]}</div><div><div class="stat-lbl">${label}</div><div class="stat-val">${this._escape(value || "--")}</div></div></div>`;
+    return `<div class="stat"><div class="stat-ico" aria-hidden="true">${icons[kind]}</div><div><div class="stat-lbl">${label}</div><div class="stat-val">${_wwEscape(value || "--")}</div></div></div>`;
   }
 
   async _initRadar(provider) {
@@ -1075,6 +1129,64 @@ class WeatherWiseCard extends HTMLElement {
       return;
     }
     window.requestAnimationFrame(() => this._scheduleRadarInit(provider));
+  }
+
+  _stopTimelineScroll() {
+    if (this._timelineScrollRaf) cancelAnimationFrame(this._timelineScrollRaf);
+    this._timelineScrollRaf = null;
+    this._timelineScrollLast = null;
+  }
+
+  _setupCardResizeObserver() {
+    this._cardResizeObserver?.disconnect?.();
+    this._cardResizeObserver = null;
+    const threshold = this._config.stack_below || 0;
+    const grid = this.shadowRoot?.querySelector(".card-grid");
+    if (!grid || !threshold || !window.ResizeObserver) return;
+    const outer = this.shadowRoot.querySelector(".card-outer");
+    if (!outer) return;
+    this._cardResizeObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect?.width;
+      if (!width) return;
+      grid.classList.toggle("ww-force-stack", width < threshold);
+    });
+    this._cardResizeObserver.observe(outer);
+  }
+
+  _startTimelineScroll() {
+    this._stopTimelineScroll();
+    const container = this.shadowRoot?.querySelector(".hourly-left");
+    if (!container) return;
+    if (container.scrollHeight <= container.clientHeight + 4) return;
+    const SPEED = 22;
+    const PAUSE = 2200;
+    this._timelineScrollDir = 1;
+    this._timelineScrollPauseUntil = Date.now() + PAUSE;
+    const tick = (timestamp) => {
+      this._timelineScrollRaf = requestAnimationFrame(tick);
+      const el = this.shadowRoot?.querySelector(".hourly-left");
+      if (!el) { this._stopTimelineScroll(); return; }
+      const now = Date.now();
+      if (now < this._timelineScrollPauseUntil) { this._timelineScrollLast = timestamp; return; }
+      if (this._timelineScrollLast === null) { this._timelineScrollLast = timestamp; return; }
+      const dt = (timestamp - this._timelineScrollLast) / 1000;
+      this._timelineScrollLast = timestamp;
+      const maxScroll = el.scrollHeight - el.clientHeight;
+      if (maxScroll <= 0) { this._stopTimelineScroll(); return; }
+      el.scrollTop += this._timelineScrollDir * SPEED * dt;
+      if (this._timelineScrollDir === 1 && el.scrollTop >= maxScroll - 1) {
+        el.scrollTop = maxScroll;
+        this._timelineScrollDir = -1;
+        this._timelineScrollPauseUntil = now + PAUSE;
+      } else if (this._timelineScrollDir === -1 && el.scrollTop <= 1) {
+        el.scrollTop = 0;
+        this._timelineScrollDir = 1;
+        this._timelineScrollPauseUntil = now + PAUSE;
+      }
+    };
+    container.addEventListener("mouseenter", () => { this._timelineScrollPauseUntil = Date.now() + 86400000; }, { passive: true });
+    container.addEventListener("mouseleave", () => { this._timelineScrollPauseUntil = Date.now() + 800; }, { passive: true });
+    this._timelineScrollRaf = requestAnimationFrame(tick);
   }
 
   async _loadLeaflet() {
@@ -1393,7 +1505,6 @@ class WeatherWiseCard extends HTMLElement {
       }).bindPopup(popupHtml, { closeButton: true, autoPan: true }).addTo(group);
       this._warningPopupMarker = marker;
       this._warningLayer = group.addTo(this._radarMap);
-      if (label) label.textContent = `${label.textContent} • ${features.length} ${this._t("activeWeatherAlert")}${features.length === 1 ? "" : "s"}`;
       if (alert) {
         alert.hidden = false;
         alert.setAttribute("role", "button");
@@ -1428,10 +1539,10 @@ class WeatherWiseCard extends HTMLElement {
   }
 
   _alertPopup(props) {
-    const event = this._escape(props.event || this._t("weatherAlert"));
-    const headline = this._escape(props.headline || "");
-    const severity = this._escape(props.severity || this._t("unknown"));
-    return `<strong>${event}</strong><br>${headline}<br>${this._escape(this._t("severity"))}: ${severity}`;
+    const event = _wwEscape(props.event || this._t("weatherAlert"));
+    const headline = _wwEscape(props.headline || "");
+    const severity = _wwEscape(props.severity || this._t("unknown"));
+    return `<strong>${event}</strong><br>${headline}<br>${_wwEscape(this._t("severity"))}: ${severity}`;
   }
 
   _unitContext(attrs) {
@@ -1561,6 +1672,13 @@ class WeatherWiseCard extends HTMLElement {
     };
   }
 
+  _sectionOrder(key) {
+    const order = this._config.panel_order;
+    if (!Array.isArray(order)) return key === "clock" ? 1 : key === "weather" ? 2 : 3;
+    const idx = order.indexOf(key);
+    return idx === -1 ? 3 : idx + 1;
+  }
+
   _numberOr(value, fallback) {
     const number = Number(value);
     return Number.isFinite(number) ? number : fallback;
@@ -1627,16 +1745,6 @@ class WeatherWiseCard extends HTMLElement {
     return raw.replace(/[-_ ]?night/gi, "") || raw;
   }
 
-  _escape(value) {
-    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    }[char]));
-  }
-
   _icon(condition, size = 36) {
     const c = String(condition || "").toLowerCase().replace(/[-_]/g, " ");
     const isNight = c.includes("night");
@@ -1660,7 +1768,7 @@ class WeatherWiseCard extends HTMLElement {
       .card-outer{container-type:inline-size;background:rgba(232,246,250,0.74);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:22px;border:1px solid rgba(255,255,255,0.42);box-shadow:0 4px 28px rgba(0,0,0,0.10);position:relative;overflow:hidden}
       :host([theme-mode="auto"]) .card-outer{background:linear-gradient(135deg,color-mix(in srgb,var(--card-background-color,#fff) 88%,transparent),color-mix(in srgb,var(--primary-color,#2a7a94) 14%,var(--card-background-color,#fff)))}
       .card-outer::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ww-wave) 62%,transparent),transparent)}
-      .card-grid{display:grid;grid-template-columns:minmax(330px,25%) minmax(620px,1fr) minmax(430px,31%);height:var(--weatherwise-card-height,clamp(450px,24cqw,540px));min-height:0;max-height:var(--weatherwise-card-max-height,580px)}
+      .card-grid{display:grid;grid-template-columns:minmax(0,var(--ww-col1,1fr)) minmax(0,var(--ww-col2,2fr)) minmax(0,var(--ww-col3,1fr));height:var(--weatherwise-card-height,clamp(450px,24cqw,540px));min-height:0;max-height:var(--weatherwise-card-max-height,580px)}
       .card-grid.no-radar{grid-template-columns:minmax(260px,34%) minmax(0,1fr)}
       .left{min-width:0;display:flex;flex-direction:column;padding:18px 22px 10px;background:linear-gradient(90deg,rgba(255,255,255,0.20),rgba(255,255,255,0.08));border-right:1px solid rgba(255,255,255,0.22);overflow:hidden}
       .clock-panel{flex-shrink:0}
@@ -1781,13 +1889,21 @@ class WeatherWiseCard extends HTMLElement {
       .debug-row{display:flex;justify-content:space-between;gap:12px;padding:3px 0}
       .debug-row code{color:var(--ww-text)}
       .card-grid.no-forecast .daily-strip{display:none}.card-grid.no-forecast .center{justify-content:center}
-      @container(max-width:1500px){.card-grid{grid-template-columns:minmax(310px,25%) minmax(570px,1fr) minmax(410px,31%);height:var(--weatherwise-card-height,clamp(440px,25cqw,520px))}.left{padding:14px 18px 10px}.center{padding:16px 20px}.clock-time{font-size:70px}.clock-date{font-size:18px;margin-bottom:11px}.forecast-summary{margin-bottom:11px}.forecast-summary-text{font-size:12px}.section-title,.current-label{font-size:15px}.temp-now{font-size:58px}.temp-hilo{font-size:18px}.cond-name{font-size:32px}.updated-note{font-size:13px}.daily-strip{min-height:172px;max-height:212px}.fc-day{font-size:20px}.fc-period{font-size:13px}.fc-icon{width:58px;height:58px}.fc-icon svg{width:54px;height:54px}.fc-temp{font-size:43px}.hour-row{grid-template-columns:50px 24px 42px minmax(52px,1fr) minmax(38px,max-content);gap:7px;min-height:32px}.hour-time-left{font-size:14px}.hour-temp-left{font-size:15px}.hour-precip{font-size:11px}.stat{padding:9px 11px;gap:9px;min-height:62px}.stat-lbl{font-size:11px}.stat-val{font-size:17px}}
-      @container(max-width:980px){.card-grid:not(.layout-wide_panel){grid-template-columns:minmax(250px,30%) minmax(0,1fr);height:var(--weatherwise-card-height,clamp(560px,58cqw,680px))}.card-grid:not(.layout-wide_panel) .center{border-right:0}.card-grid:not(.layout-wide_panel) .right{grid-column:1 / -1;height:240px;border-top:1px solid rgba(255,255,255,0.28);border-radius:0 0 22px 22px}.card-grid:not(.layout-wide_panel) #rmap{height:240px}.card-grid:not(.layout-wide_panel) .daily-strip{min-height:150px;max-height:none}}
-      .card-grid.layout-wide_panel{grid-template-columns:minmax(260px,25%) minmax(430px,1fr) minmax(320px,31%);height:var(--weatherwise-card-height,clamp(390px,22cqw,500px))}
+      @container(max-width:1500px){.card-grid{height:var(--weatherwise-card-height,clamp(440px,25cqw,520px))}.left{padding:14px 18px 10px}.center{padding:16px 20px}.clock-time{font-size:70px}.clock-date{font-size:18px;margin-bottom:11px}.forecast-summary{margin-bottom:11px}.forecast-summary-text{font-size:12px}.section-title,.current-label{font-size:15px}.temp-now{font-size:58px}.temp-hilo{font-size:18px}.cond-name{font-size:32px}.updated-note{font-size:13px}.daily-strip{min-height:172px;max-height:212px}.fc-day{font-size:20px}.fc-period{font-size:13px}.fc-icon{width:58px;height:58px}.fc-icon svg{width:54px;height:54px}.fc-temp{font-size:43px}.hour-row{grid-template-columns:50px 24px 42px minmax(52px,1fr) minmax(38px,max-content);gap:7px;min-height:32px}.hour-time-left{font-size:14px}.hour-temp-left{font-size:15px}.hour-precip{font-size:11px}.stat{padding:9px 11px;gap:9px;min-height:62px}.stat-lbl{font-size:11px}.stat-val{font-size:17px}}
+      @container(max-width:980px){.card-grid:not(.layout-wide_panel){height:var(--weatherwise-card-height,clamp(560px,58cqw,680px))}.card-grid:not(.layout-wide_panel) .center{border-right:0}.card-grid:not(.layout-wide_panel) .right{grid-column:1 / -1;height:240px;border-top:1px solid rgba(255,255,255,0.28);border-radius:0 0 22px 22px}.card-grid:not(.layout-wide_panel) #rmap{height:240px}.card-grid:not(.layout-wide_panel) .daily-strip{min-height:150px;max-height:none}}
+      .card-grid.layout-wide_panel{height:var(--weatherwise-card-height,clamp(390px,22cqw,500px))}
       .card-grid.layout-stacked,.card-grid.layout-compact{display:flex;flex-direction:column;height:auto;max-height:none}.card-grid.layout-stacked .left,.card-grid.layout-compact .left{display:contents}.card-grid.layout-stacked .clock-panel,.card-grid.layout-compact .clock-panel{order:1;padding:18px 22px 0;background:linear-gradient(90deg,rgba(255,255,255,0.20),rgba(255,255,255,0.08))}.card-grid.layout-stacked .center,.card-grid.layout-compact .center{order:2;border-right:0;overflow:visible}.card-grid.layout-stacked .left>.section-title,.card-grid.layout-compact .left>.section-title{order:3;padding:0 22px;margin-top:4px}.card-grid.layout-stacked .hourly-left,.card-grid.layout-compact .hourly-left{order:4;flex:none;overflow:visible;padding:0 22px 16px}.card-grid.layout-stacked .right,.card-grid.layout-compact .right{order:5;border-top:1px solid rgba(255,255,255,0.28);border-radius:0 0 22px 22px}.card-grid.layout-stacked .right,.card-grid.layout-stacked #rmap{height:300px;min-height:300px}.card-grid.layout-compact .right,.card-grid.layout-compact #rmap{height:220px;min-height:220px}.card-grid.layout-compact .daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));min-height:150px}.card-grid.layout-compact .fc-slot:nth-child(n+4){display:none}
       @container(max-width:720px){.card-grid:not(.layout-wide_panel),.card-grid.no-radar:not(.layout-wide_panel){display:flex;flex-direction:column;height:auto;max-height:none}.card-grid:not(.layout-wide_panel) .left{display:contents}.card-grid:not(.layout-wide_panel) .clock-panel{order:1;padding:18px 20px 0}.card-grid:not(.layout-wide_panel) .center{order:2;border-right:0;overflow:visible}.card-grid:not(.layout-wide_panel) .left>.section-title{order:3;padding:0 20px}.card-grid:not(.layout-wide_panel) .hourly-left{order:4;flex:none;overflow:visible;padding:0 20px 16px}.card-grid:not(.layout-wide_panel) .right{order:5}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.card-grid:not(.layout-wide_panel) .daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{height:300px;min-height:300px}.card-grid.layout-wide_panel{display:grid;grid-template-columns:minmax(120px,24%) minmax(230px,1fr) minmax(150px,28%);height:360px;max-height:360px}.card-grid.layout-wide_panel .left{display:flex;padding:12px 10px}.card-grid.layout-wide_panel .center{padding:12px 10px}.card-grid.layout-wide_panel .clock-time{font-size:38px}.card-grid.layout-wide_panel .clock-date{font-size:12px;margin:5px 0 7px}.card-grid.layout-wide_panel .forecast-summary{min-height:26px;margin-bottom:8px}.card-grid.layout-wide_panel .forecast-summary-text{font-size:11px;padding:6px 14px}.card-grid.layout-wide_panel .current-icon{width:44px;height:44px}.card-grid.layout-wide_panel .cond-name{font-size:21px}.card-grid.layout-wide_panel .temp-now{font-size:38px}.card-grid.layout-wide_panel .daily-strip{grid-template-columns:repeat(var(--ww-forecast-count,5),minmax(70px,1fr));gap:6px;overflow:hidden}.card-grid.layout-wide_panel .fc-temp{font-size:28px}.card-grid.layout-wide_panel .stats-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.card-grid.layout-wide_panel .right,.card-grid.layout-wide_panel #rmap{height:100%;min-height:0}}
       @media(max-width:760px){.card-grid:not(.layout-wide_panel),.card-grid.no-radar:not(.layout-wide_panel){display:flex;flex-direction:column;height:auto;max-height:none}.card-grid:not(.layout-wide_panel) .left{display:contents}.card-grid:not(.layout-wide_panel) .clock-panel{order:1;padding:18px 20px 0}.card-grid:not(.layout-wide_panel) .center{order:2;border-right:0;overflow:visible}.card-grid:not(.layout-wide_panel) .left>.section-title{order:3;padding:0 20px}.card-grid:not(.layout-wide_panel) .hourly-left{order:4;flex:none;overflow:visible;padding:0 20px 16px}.card-grid:not(.layout-wide_panel) .right{order:5}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.card-grid:not(.layout-wide_panel) .daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{height:300px;min-height:300px}}
       @media(prefers-reduced-motion:reduce){:host([animations]) .ww-sun-rays,:host([animations]) .ww-sun-core,:host([animations]) .ww-cloud,:host([animations]) .ww-rain,:host([animations]) .ww-snow,:host([animations]) .ww-bolt,:host([animations]) .ww-moon,:host([animations]) .ww-moon-glow,:host([animations]) .ww-fog,:host([animations]) .hour-row,:host([animations]) .fc-slot,:host([animations]) .forecast-summary-text{animation:none!important}:host([animations]) .hour-bar-fill{transition:none!important}}
+
+      .card-grid.layout-radar_bottom{display:grid;grid-template-columns:minmax(310px,28%) minmax(0,1fr);grid-template-rows:clamp(420px,28cqw,540px) 340px;height:auto;max-height:none}
+      .card-grid.layout-radar_bottom .left{grid-column:1;grid-row:1;overflow:hidden}
+      .card-grid.layout-radar_bottom .center{grid-column:2;grid-row:1;border-right:0;overflow:hidden}
+      .card-grid.layout-radar_bottom .right{grid-column:1/-1;grid-row:2;height:340px;min-height:340px;border-top:1px solid rgba(255,255,255,0.28);border-radius:0 0 22px 22px;position:relative;z-index:0}
+      .card-grid.layout-radar_bottom #rmap{height:340px;min-height:340px}
+      .card-grid.ww-force-stack:not(.layout-wide_panel),.card-grid.ww-force-stack.no-radar:not(.layout-wide_panel){display:flex;flex-direction:column;height:auto;max-height:none}.card-grid.ww-force-stack:not(.layout-wide_panel) .left{display:contents}.card-grid.ww-force-stack:not(.layout-wide_panel) .clock-panel{order:1;padding:18px 20px 0}.card-grid.ww-force-stack:not(.layout-wide_panel) .center{order:2;border-right:0;overflow:visible}.card-grid.ww-force-stack:not(.layout-wide_panel) .left>.section-title{order:3;padding:0 20px}.card-grid.ww-force-stack:not(.layout-wide_panel) .hourly-left{order:4;flex:none;overflow:visible;padding:0 20px 16px}.card-grid.ww-force-stack:not(.layout-wide_panel) .right{order:5;height:300px;min-height:300px;border-top:1px solid rgba(255,255,255,0.28);border-radius:0 0 22px 22px}.card-grid.ww-force-stack:not(.layout-wide_panel) #rmap{height:300px;min-height:300px}.card-grid.ww-force-stack:not(.layout-wide_panel) .daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.card-grid.ww-force-stack:not(.layout-wide_panel) .stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+      @container(max-width:720px){.card-grid.layout-radar_bottom{grid-template-columns:1fr;grid-template-rows:auto auto 300px}.card-grid.layout-radar_bottom .left{grid-column:1;grid-row:1}.card-grid.layout-radar_bottom .center{grid-column:1;grid-row:2;border-right:0}.card-grid.layout-radar_bottom .right{grid-column:1;grid-row:3;height:300px;min-height:300px}.card-grid.layout-radar_bottom #rmap{height:300px;min-height:300px}}
     `;
   }
 }
@@ -1852,7 +1968,7 @@ class WeatherWiseCardEditor extends HTMLElement {
 
   _setValue(key, value) {
     const numberKeys = ["latitude", "longitude", "hourly_count", "forecast_count", "radar_zoom", "radar_speed"];
-    const booleanKeys = ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay", "show_animations", "show_timeline", "show_forecast", "show_forecast_summary"];
+    const booleanKeys = ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay", "show_animations", "show_timeline", "show_forecast", "show_forecast_summary", "timeline_autoscroll"];
     let nextValue = value;
     if (numberKeys.includes(key)) nextValue = value === "" ? undefined : Number(value);
     if (booleanKeys.includes(key)) nextValue = Boolean(value);
@@ -1876,25 +1992,25 @@ class WeatherWiseCardEditor extends HTMLElement {
     const hasConfiguredHumidityEntity = humiditySensors.some(([entityId]) => entityId === config.humidity_entity);
     const hasConfiguredTemperatureEntity = temperatureSensors.some(([entityId]) => entityId === config.temperature_entity);
     const configuredOption = config.entity && !hasConfiguredEntity
-      ? `<option value="${this._escape(config.entity)}" selected>${this._escape(config.entity)}</option>`
+      ? `<option value="${_wwEscape(config.entity)}" selected>${_wwEscape(config.entity)}</option>`
       : "";
     const configuredHumidityOption = config.humidity_entity && !hasConfiguredHumidityEntity && isWeatherWiseHumidityEntity(config.humidity_entity, this._hass?.states?.[config.humidity_entity])
-      ? `<option value="${this._escape(config.humidity_entity)}" selected>${this._escape(config.humidity_entity)}</option>`
+      ? `<option value="${_wwEscape(config.humidity_entity)}" selected>${_wwEscape(config.humidity_entity)}</option>`
       : "";
     const configuredTemperatureOption = config.temperature_entity && !hasConfiguredTemperatureEntity && isWeatherWiseTemperatureEntity(config.temperature_entity, this._hass?.states?.[config.temperature_entity])
-      ? `<option value="${this._escape(config.temperature_entity)}" selected>${this._escape(config.temperature_entity)}</option>`
+      ? `<option value="${_wwEscape(config.temperature_entity)}" selected>${_wwEscape(config.temperature_entity)}</option>`
       : "";
     const weatherOptions = entities.map(([entityId, state]) => {
       const name = state.attributes?.friendly_name || entityId;
-      return `<option value="${this._escape(entityId)}" ${config.entity === entityId ? "selected" : ""}>${this._escape(name)} (${this._escape(entityId)})</option>`;
+      return `<option value="${_wwEscape(entityId)}" ${config.entity === entityId ? "selected" : ""}>${_wwEscape(name)} (${_wwEscape(entityId)})</option>`;
     }).join("");
     const temperatureOptions = temperatureSensors.map(([entityId, state]) => {
       const name = state.attributes?.friendly_name || entityId;
-      return `<option value="${this._escape(entityId)}" ${config.temperature_entity === entityId ? "selected" : ""}>${this._escape(name)} (${this._escape(entityId)})</option>`;
+      return `<option value="${_wwEscape(entityId)}" ${config.temperature_entity === entityId ? "selected" : ""}>${_wwEscape(name)} (${_wwEscape(entityId)})</option>`;
     }).join("");
     const humidityOptions = humiditySensors.map(([entityId, state]) => {
       const name = state.attributes?.friendly_name || entityId;
-      return `<option value="${this._escape(entityId)}" ${config.humidity_entity === entityId ? "selected" : ""}>${this._escape(name)} (${this._escape(entityId)})</option>`;
+      return `<option value="${_wwEscape(entityId)}" ${config.humidity_entity === entityId ? "selected" : ""}>${_wwEscape(name)} (${_wwEscape(entityId)})</option>`;
     }).join("");
     this.shadowRoot.innerHTML = `
       <style>
@@ -1909,6 +2025,29 @@ class WeatherWiseCardEditor extends HTMLElement {
         .check{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--primary-text-color,#0a1e28)}
         .check input{width:auto}
         @media(max-width:600px){.grid{grid-template-columns:1fr}}
+        .layout-label{font-size:13px;font-weight:700;color:var(--secondary-text-color,#536b75);margin:12px 0 8px}
+        .layout-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+        .layout-tile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 6px;border:2px solid var(--divider-color,rgba(0,0,0,.15));border-radius:10px;cursor:pointer;background:var(--card-background-color,#fff);transition:border-color .15s,background .15s;user-select:none}
+        .layout-tile:hover{border-color:var(--primary-color,#2a7a94);background:color-mix(in srgb,var(--primary-color,#2a7a94) 6%,var(--card-background-color,#fff))}
+        .layout-tile.selected{border-color:var(--primary-color,#2a7a94);background:color-mix(in srgb,var(--primary-color,#2a7a94) 10%,var(--card-background-color,#fff))}
+        .layout-tile svg{display:block}
+        .layout-tile-name{font-size:12px;font-weight:800;color:var(--primary-text-color,#0a1e28);text-align:center;line-height:1.2}
+        .layout-tile-desc{font-size:10px;font-weight:600;color:var(--secondary-text-color,#536b75);text-align:center;line-height:1.2}
+        @media(max-width:480px){.layout-picker{grid-template-columns:repeat(2,1fr)}}
+        .panel-order-label{font-size:13px;font-weight:700;color:var(--secondary-text-color,#536b75);margin:12px 0 6px}
+        .panel-order-list{display:flex;flex-direction:column;gap:6px}
+        .panel-order-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--divider-color,rgba(0,0,0,.15));border-radius:10px;background:var(--card-background-color,#fff);cursor:grab;user-select:none;transition:box-shadow .15s,opacity .15s}
+        .panel-order-item:active{cursor:grabbing}
+        .panel-order-item.drag-over{box-shadow:0 0 0 2px var(--primary-color,#2a7a94);border-color:var(--primary-color,#2a7a94)}
+        .panel-order-item.dragging{opacity:.4}
+        .drag-handle{font-size:18px;color:var(--secondary-text-color,#536b75);line-height:1;flex-shrink:0}
+        .panel-order-icon{width:32px;height:32px;flex-shrink:0;display:grid;place-items:center}
+        .panel-order-name{font-size:13px;font-weight:800;color:var(--primary-text-color,#0a1e28)}
+        .panel-order-desc{font-size:11px;color:var(--secondary-text-color,#536b75)}
+        .col-widths{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+        .col-width-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--secondary-text-color,#536b75)}
+        .col-width-row input[type=range]{width:100%;accent-color:var(--primary-color,#2a7a94)}
+        .col-width-val{font-size:13px;font-weight:800;color:var(--primary-text-color,#0a1e28);min-width:28px;text-align:right}
       </style>
       <div class="editor">
         <div class="section">
@@ -1970,7 +2109,7 @@ class WeatherWiseCardEditor extends HTMLElement {
         <div class="section">
           <div class="section-title">Display</div>
           <div class="grid">
-            <label>Title <input id="title" value="${this._escape(config.title || "")}" placeholder="Local Weather"></label>
+            <label>Title <input id="title" value="${_wwEscape(config.title || "")}" placeholder="Local Weather"></label>
             <label>Units
               <select id="units">
                 <option value="auto" ${config.units !== "imperial" && config.units !== "metric" ? "selected" : ""}>Auto from weather entity</option>
@@ -1981,7 +2120,7 @@ class WeatherWiseCardEditor extends HTMLElement {
             <label>Theme
               <select id="theme_mode">
                 <option value="weatherwise" ${config.theme_mode !== "auto" ? "selected" : ""}>WeatherWise</option>
-                <option value="auto" ${config.theme_mode === "auto" ? "selected" : ""}>Home Assistant theme</option>
+                <option value="auto" ${config.theme_mode === "auto" ? "selected" : ""}>Match Home Assistant theme</option>
               </select>
             </label>
             <label>Language
@@ -1989,27 +2128,162 @@ class WeatherWiseCardEditor extends HTMLElement {
                 ${Object.entries(WEATHERWISE_LANGUAGES).map(([value, label]) => `<option value="${value}" ${(config.language || "auto") === value ? "selected" : ""}>${label}</option>`).join("")}
               </select>
             </label>
-            <label>Layout
-              <select id="layout">
-                ${Object.entries(WEATHERWISE_LAYOUTS).map(([value, label]) => `<option value="${value}" ${(config.layout || "auto") === value ? "selected" : ""}>${label}</option>`).join("")}
-              </select>
-            </label>
-            <label>Forecast list rows <input id="hourly_count" type="number" min="1" max="24" value="${this._escape(config.hourly_count || 5)}"></label>
-            <label>Forecast cards <input id="forecast_count" type="number" min="1" max="7" value="${this._escape(config.forecast_count || 5)}"></label>
+            <label>Forecast list rows <input id="hourly_count" type="number" min="1" max="24" value="${_wwEscape(config.hourly_count || 5)}"></label>
+            <label>Forecast cards <input id="forecast_count" type="number" min="1" max="7" value="${_wwEscape(config.forecast_count || 5)}"></label>
           </div>
-          <label class="check"><input id="show_forecast_summary" type="checkbox" ${config.show_forecast_summary === false ? "" : "checked"}> Show forecast summary</label>
-          <label class="check"><input id="show_timeline" type="checkbox" ${config.show_timeline === false ? "" : "checked"}> Show hourly / forecast list</label>
-          <label class="check"><input id="show_forecast" type="checkbox" ${config.show_forecast === false ? "" : "checked"}> Show daily forecast cards</label>
-          <label class="check"><input id="show_animations" type="checkbox" ${config.show_animations === false ? "" : "checked"}> Subtle weather animations</label>
+          <div class="layout-label">Card layout</div>
+          <div class="layout-picker">
+            <button type="button" class="layout-tile${(config.layout || "auto") === "auto" ? " selected" : ""}" data-layout="auto" title="Automatically adapts to screen size">
+              <svg width="72" height="50" viewBox="0 0 72 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="70" height="48" rx="5" fill="var(--card-background-color,#f4f7f9)" stroke="var(--divider-color,#cdd5da)" stroke-width="1.5"/>
+                <rect x="4" y="4" width="18" height="42" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".18"/>
+                <rect x="6" y="7" width="10" height="4" rx="1.5" fill="var(--primary-color,#2a7a94)" opacity=".7"/>
+                <rect x="6" y="13" width="14" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".35"/>
+                <rect x="6" y="17" width="12" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".25"/>
+                <rect x="6" y="23" width="14" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".2"/>
+                <rect x="6" y="27" width="14" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".2"/>
+                <rect x="6" y="31" width="14" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".2"/>
+                <rect x="24" y="4" width="26" height="42" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".1"/>
+                <circle cx="33" cy="14" r="6" fill="var(--primary-color,#2a7a94)" opacity=".4"/>
+                <rect x="27" y="23" width="22" height="3" rx="1.5" fill="var(--primary-color,#2a7a94)" opacity=".25"/>
+                <rect x="27" y="28" width="22" height="3" rx="1.5" fill="var(--primary-color,#2a7a94)" opacity=".18"/>
+                <rect x="27" y="33" width="22" height="3" rx="1.5" fill="var(--primary-color,#2a7a94)" opacity=".12"/>
+                <rect x="52" y="4" width="16" height="42" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".13"/>
+                <path d="M52 26 Q56 20 60 24 Q64 18 68 22" stroke="var(--primary-color,#2a7a94)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".5"/>
+              </svg>
+              <span class="layout-tile-name">Auto</span>
+              <span class="layout-tile-desc">Adapts to screen</span>
+            </button>
+            <button type="button" class="layout-tile${(config.layout || "auto") === "wide_panel" ? " selected" : ""}" data-layout="wide_panel" title="Optimised for wide screens — columns stay side-by-side">
+              <svg width="72" height="50" viewBox="0 0 72 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="70" height="48" rx="5" fill="var(--card-background-color,#f4f7f9)" stroke="var(--divider-color,#cdd5da)" stroke-width="1.5"/>
+                <rect x="4" y="4" width="14" height="42" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".18"/>
+                <rect x="6" y="7" width="8" height="3" rx="1.5" fill="var(--primary-color,#2a7a94)" opacity=".7"/>
+                <rect x="6" y="13" width="10" height="1.5" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".35"/>
+                <rect x="6" y="17" width="9" height="1.5" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".25"/>
+                <rect x="6" y="21" width="10" height="1.5" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".2"/>
+                <rect x="6" y="25" width="10" height="1.5" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".2"/>
+                <rect x="6" y="29" width="10" height="1.5" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".2"/>
+                <rect x="20" y="4" width="30" height="42" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".1"/>
+                <circle cx="30" cy="13" r="5" fill="var(--primary-color,#2a7a94)" opacity=".4"/>
+                <rect x="23" y="22" width="24" height="2.5" rx="1.5" fill="var(--primary-color,#2a7a94)" opacity=".25"/>
+                <rect x="23" y="27" width="24" height="2.5" rx="1.5" fill="var(--primary-color,#2a7a94)" opacity=".18"/>
+                <rect x="23" y="32" width="24" height="2.5" rx="1.5" fill="var(--primary-color,#2a7a94)" opacity=".12"/>
+                <rect x="52" y="4" width="16" height="42" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".13"/>
+                <path d="M52 26 Q56 20 60 24 Q64 18 68 22" stroke="var(--primary-color,#2a7a94)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".5"/>
+              </svg>
+              <span class="layout-tile-name">Wide panel</span>
+              <span class="layout-tile-desc">Always side-by-side</span>
+            </button>
+            <button type="button" class="layout-tile${(config.layout || "auto") === "stacked" ? " selected" : ""}" data-layout="stacked" title="Sections stack vertically — good for narrow dashboards">
+              <svg width="72" height="50" viewBox="0 0 72 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="70" height="48" rx="5" fill="var(--card-background-color,#f4f7f9)" stroke="var(--divider-color,#cdd5da)" stroke-width="1.5"/>
+                <rect x="4" y="4" width="64" height="13" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".18"/>
+                <rect x="8" y="7" width="16" height="4" rx="1.5" fill="var(--primary-color,#2a7a94)" opacity=".7"/>
+                <rect x="28" y="8" width="12" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".3"/>
+                <rect x="28" y="12" width="20" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".2"/>
+                <rect x="4" y="19" width="64" height="13" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".1"/>
+                <rect x="8" y="22" width="56" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".25"/>
+                <rect x="8" y="26" width="48" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".18"/>
+                <rect x="8" y="30" width="52" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".12"/>
+                <rect x="4" y="34" width="64" height="12" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".13"/>
+                <path d="M8 42 Q18 36 28 40 Q38 34 48 38 Q55 34 64 37" stroke="var(--primary-color,#2a7a94)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".5"/>
+              </svg>
+              <span class="layout-tile-name">Stacked</span>
+              <span class="layout-tile-desc">Sections top to bottom</span>
+            </button>
+            <button type="button" class="layout-tile${(config.layout || "auto") === "radar_bottom" ? " selected" : ""}" data-layout="radar_bottom" title="Hourly and current weather side-by-side on top, full-width radar below">
+              <svg width="72" height="50" viewBox="0 0 72 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="70" height="48" rx="5" fill="var(--card-background-color,#f4f7f9)" stroke="var(--divider-color,#cdd5da)" stroke-width="1.5"/>
+                <rect x="4" y="4" width="18" height="22" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".18"/>
+                <rect x="6" y="7" width="10" height="4" rx="1.5" fill="var(--primary-color,#2a7a94)" opacity=".7"/>
+                <rect x="6" y="13" width="14" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".3"/>
+                <rect x="6" y="17" width="12" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".2"/>
+                <rect x="6" y="21" width="14" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".15"/>
+                <rect x="24" y="4" width="44" height="22" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".1"/>
+                <circle cx="34" cy="13" r="5" fill="var(--primary-color,#2a7a94)" opacity=".4"/>
+                <rect x="27" y="21" width="38" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".2"/>
+                <rect x="4" y="28" width="64" height="18" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".13"/>
+                <path d="M6 40 Q14 33 22 37 Q30 31 38 35 Q46 30 54 34 Q60 31 66 33" stroke="var(--primary-color,#2a7a94)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".55"/>
+              </svg>
+              <span class="layout-tile-name">Radar bottom</span>
+              <span class="layout-tile-desc">Wide radar below</span>
+            </button>
+            <button type="button" class="layout-tile${(config.layout || "auto") === "compact" ? " selected" : ""}" data-layout="compact" title="Shorter stacked layout — good for sidebar or mobile">
+              <svg width="72" height="50" viewBox="0 0 72 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="1" y="1" width="70" height="48" rx="5" fill="var(--card-background-color,#f4f7f9)" stroke="var(--divider-color,#cdd5da)" stroke-width="1.5"/>
+                <rect x="4" y="4" width="64" height="10" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".18"/>
+                <rect x="8" y="6" width="14" height="3" rx="1.5" fill="var(--primary-color,#2a7a94)" opacity=".7"/>
+                <rect x="26" y="7" width="20" height="2" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".25"/>
+                <rect x="4" y="16" width="64" height="9" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".1"/>
+                <rect x="8" y="18" width="56" height="1.5" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".25"/>
+                <rect x="8" y="22" width="40" height="1.5" rx="1" fill="var(--primary-color,#2a7a94)" opacity=".18"/>
+                <rect x="4" y="27" width="64" height="9" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".08"/>
+                <rect x="8" y="29" width="22" height="5" rx="2" fill="var(--primary-color,#2a7a94)" opacity=".15"/>
+                <rect x="32" y="29" width="14" height="5" rx="2" fill="var(--primary-color,#2a7a94)" opacity=".12"/>
+                <rect x="48" y="29" width="14" height="5" rx="2" fill="var(--primary-color,#2a7a94)" opacity=".1"/>
+                <rect x="4" y="38" width="64" height="8" rx="3" fill="var(--primary-color,#2a7a94)" opacity=".13"/>
+                <path d="M8 44 Q18 40 28 42 Q38 38 48 41 Q55 38 64 40" stroke="var(--primary-color,#2a7a94)" stroke-width="1.5" stroke-linecap="round" fill="none" opacity=".5"/>
+              </svg>
+              <span class="layout-tile-name">Compact</span>
+              <span class="layout-tile-desc">Condensed, less tall</span>
+            </button>
+          </div>
+          <div class="hint" style="margin-top:10px">Auto is recommended for most dashboards — it switches between wide and stacked depending on how much space the card has.</div>
+          <div class="panel-order-label">Panel order — drag to rearrange</div>
+          <div class="panel-order-list" id="panel-order-list">
+            ${(config.panel_order || ["clock","weather","radar"]).map((key) => {
+              const meta = {
+                clock:   { name: "Clock & Timeline",    desc: "Time, date, forecast summary, hourly list", icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>` },
+                weather: { name: "Current Weather",     desc: "Condition, temperature, forecast cards, stats", icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="10" r="4" fill="#fbbf24"/><path d="M5 17a5 5 0 0 1 14 0" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round"/></svg>` },
+                radar:   { name: "Radar Map",           desc: "Live radar, warnings, playback controls", icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 12 L18 6" stroke="#2a7a94" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="12" r="2" fill="#2a7a94"/></svg>` }
+              }[key] || { name: key, desc: "", icon: "" };
+              return `<div class="panel-order-item" draggable="true" data-panel="${_wwEscape(key)}">
+                <span class="drag-handle" aria-hidden="true">⠿</span>
+                <span class="panel-order-icon" style="color:var(--primary-color,#2a7a94)">${meta.icon}</span>
+                <div><div class="panel-order-name">${_wwEscape(meta.name)}</div><div class="panel-order-desc">${_wwEscape(meta.desc)}</div></div>
+              </div>`;
+            }).join("")}
+          </div>
+          <div class="col-widths">
+            ${(config.panel_order || ["clock","weather","radar"]).map((key, i) => {
+              const names = { clock: "Clock & Timeline", weather: "Current Weather", radar: "Radar Map" };
+              const w = (config.column_widths || [25,50,25])[i] || 25;
+              return `<div class="col-width-row">
+                <span class="col-width-name">${_wwEscape(names[key] || key)}</span>
+                <div style="display:flex;align-items:center;gap:4px">
+                  <button type="button" class="col-width-step" data-idx="${i}" data-dir="-1" style="width:28px;height:28px;border:1px solid var(--divider-color,rgba(0,0,0,.15));border-radius:6px;background:var(--card-background-color,#fff);color:var(--primary-text-color);font-size:16px;cursor:pointer;line-height:1;padding:0">−</button>
+                  <span id="col_width_val_${i}" style="min-width:42px;text-align:center;font-size:15px;font-weight:700;color:var(--primary-text-color,#0a1e28)">${w}%</span>
+                  <button type="button" class="col-width-step" data-idx="${i}" data-dir="1" style="width:28px;height:28px;border:1px solid var(--divider-color,rgba(0,0,0,.15));border-radius:6px;background:var(--card-background-color,#fff);color:var(--primary-text-color);font-size:16px;cursor:pointer;line-height:1;padding:0">+</button>
+                </div>
+              </div>`;
+            }).join("")}
+            ${(() => { const tot = (config.column_widths || [25,50,25]).reduce((a,b)=>a+b,0); const ok = tot === 100; return `<div style="margin-top:8px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:12px;font-weight:${ok?"normal":"700"};color:${ok?"var(--secondary-text-color,#536b75)":"var(--error-color,#c0392b)"}">Total: ${tot}%${ok?"":" — must equal 100%"}</span><button type="button" id="col_width_reset" style="font-size:12px;padding:4px 10px;border:1px solid var(--divider-color,rgba(0,0,0,.15));border-radius:6px;background:var(--card-background-color,#fff);color:var(--secondary-text-color,#536b75);cursor:pointer">Reset widths</button></div>`; })()}
+          </div>
+          <div style="margin-top:14px">
+            <div class="col-width-label" style="margin-bottom:2px">Collapse to vertical layout when too narrow</div>
+            <div class="hint" style="margin-bottom:6px">If the card looks cramped or squished, set this to the card's approximate pixel width. The card will automatically stack vertically when it's smaller than that size. Leave at Off if the card looks fine.</div>
+            <div class="col-width-row">
+              <input type="range" id="stack_below" min="0" max="1200" step="50" value="${config.stack_below || 0}" style="flex:1">
+              <span class="col-width-val" id="stack_below_val">${config.stack_below ? config.stack_below + "px" : "Off"}</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+            <label class="check"><input id="show_forecast_summary" type="checkbox" ${config.show_forecast_summary === false ? "" : "checked"}> Show forecast summary ticker</label>
+            <label class="check"><input id="show_timeline" type="checkbox" ${config.show_timeline === false ? "" : "checked"}> Show hourly / forecast list</label>
+            <label class="check"><input id="show_forecast" type="checkbox" ${config.show_forecast === false ? "" : "checked"}> Show daily forecast cards</label>
+            <label class="check"><input id="timeline_autoscroll" type="checkbox" ${config.timeline_autoscroll ? "checked" : ""}> Auto-scroll the forecast list</label>
+            <label class="check"><input id="show_animations" type="checkbox" ${config.show_animations === false ? "" : "checked"}> Subtle weather animations</label>
+          </div>
           <div class="hint">Animations automatically pause when the browser or device requests reduced motion.</div>
         </div>
         <div class="section">
           <div class="section-title">Radar location</div>
           <div class="grid">
-            <label>Latitude <input id="latitude" type="number" step="0.0001" value="${this._escape(config.latitude ?? "")}"></label>
-            <label>Longitude <input id="longitude" type="number" step="0.0001" value="${this._escape(config.longitude ?? "")}"></label>
-            <label>Radar zoom <input id="radar_zoom" type="number" min="3" max="12" value="${this._escape(config.radar_zoom || 7)}"></label>
-            <label>Loop speed <input id="radar_speed" type="number" min="300" max="3000" step="100" value="${this._escape(config.radar_speed || 700)}"></label>
+            <label>Latitude <input id="latitude" type="number" step="0.0001" value="${_wwEscape(config.latitude ?? "")}"></label>
+            <label>Longitude <input id="longitude" type="number" step="0.0001" value="${_wwEscape(config.longitude ?? "")}"></label>
+            <label>Radar zoom <input id="radar_zoom" type="number" min="3" max="12" value="${_wwEscape(config.radar_zoom || 7)}"></label>
+            <label>Loop speed <input id="radar_speed" type="number" min="300" max="3000" step="100" value="${_wwEscape(config.radar_speed || 700)}"></label>
           </div>
           <label class="check"><input id="show_radar" type="checkbox" ${config.show_radar === false ? "" : "checked"}> Show radar panel</label>
           <label class="check"><input id="show_map_controls" type="checkbox" ${config.show_map_controls === false ? "" : "checked"}> Show map controls</label>
@@ -2019,23 +2293,78 @@ class WeatherWiseCardEditor extends HTMLElement {
         </div>
       </div>
     `;
-    ["entity", "temperature_entity", "humidity_entity", "country", "radar_provider", "radar_style", "radar_basemap", "radar_timeline", "title", "units", "theme_mode", "language", "layout", "latitude", "longitude", "hourly_count", "forecast_count", "radar_zoom", "radar_speed"].forEach((id) => {
+    ["entity", "temperature_entity", "humidity_entity", "country", "radar_provider", "radar_style", "radar_basemap", "radar_timeline", "title", "units", "theme_mode", "language", "latitude", "longitude", "hourly_count", "forecast_count", "radar_zoom", "radar_speed"].forEach((id) => {
       this.shadowRoot.getElementById(id)?.addEventListener("change", (event) => this._setValue(id, event.target.value));
     });
-    ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay", "show_animations", "show_timeline", "show_forecast", "show_forecast_summary"].forEach((id) => {
+    ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay", "show_animations", "show_timeline", "show_forecast", "show_forecast_summary", "timeline_autoscroll"].forEach((id) => {
       this.shadowRoot.getElementById(id)?.addEventListener("change", (event) => this._setValue(id, event.target.checked));
+    });
+    this.shadowRoot.querySelectorAll(".layout-tile").forEach((tile) => {
+      tile.addEventListener("click", () => this._setValue("layout", tile.dataset.layout));
+    });
+    // Column width +/− buttons
+    this.shadowRoot.querySelectorAll(".col-width-step").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const i = Number(btn.dataset.idx);
+        const dir = Number(btn.dataset.dir);
+        const widths = (this._config.column_widths || [25, 50, 25]).slice();
+        widths[i] = Math.max(20, Math.min(60, (widths[i] || 25) + dir * 5));
+        this._setValue("column_widths", widths);
+      });
+    });
+    // Reset column widths
+    this.shadowRoot.getElementById("col_width_reset")?.addEventListener("click", () => {
+      this._setValue("column_widths", [25, 50, 25]);
+    });
+    // Stack below slider
+    const stackSlider = this.shadowRoot.getElementById("stack_below");
+    const stackVal = this.shadowRoot.getElementById("stack_below_val");
+    if (stackSlider && stackVal) {
+      stackSlider.addEventListener("change", () => {
+        const v = Number(stackSlider.value);
+        stackVal.textContent = v === 0 ? "Off" : `${v}px`;
+        this._setValue("stack_below", v);
+      });
+      stackSlider.addEventListener("input", () => {
+        const v = Number(stackSlider.value);
+        stackVal.textContent = v === 0 ? "Off" : `${v}px`;
+      });
+    }
+    // Drag-to-reorder panel order
+    let dragKey = null;
+    this.shadowRoot.querySelectorAll(".panel-order-item").forEach((item) => {
+      item.addEventListener("dragstart", (e) => {
+        dragKey = item.dataset.panel;
+        item.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+      });
+      item.addEventListener("dragend", () => {
+        dragKey = null;
+        this.shadowRoot.querySelectorAll(".panel-order-item").forEach((el) => el.classList.remove("dragging", "drag-over"));
+      });
+      item.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if (item.dataset.panel !== dragKey) {
+          this.shadowRoot.querySelectorAll(".panel-order-item").forEach((el) => el.classList.remove("drag-over"));
+          item.classList.add("drag-over");
+        }
+      });
+      item.addEventListener("dragleave", () => item.classList.remove("drag-over"));
+      item.addEventListener("drop", (e) => {
+        e.preventDefault();
+        if (!dragKey || item.dataset.panel === dragKey) return;
+        const current = (this._config.panel_order || ["clock", "weather", "radar"]).slice();
+        const fromIdx = current.indexOf(dragKey);
+        const toIdx = current.indexOf(item.dataset.panel);
+        if (fromIdx === -1 || toIdx === -1) return;
+        current.splice(fromIdx, 1);
+        current.splice(toIdx, 0, dragKey);
+        this._setValue("panel_order", current);
+      });
     });
   }
 
-  _escape(value) {
-    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    }[char]));
-  }
 }
 
 class WeatherWiseDashedCard extends WeatherWiseCard {}
