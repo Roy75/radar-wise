@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4
+
+### Changed
+
+- Added an on-map alert chip when US NWS alerts are active so the red radar marker is clearly identified.
+- Updated the radar footer to show active alert counts with a cleaner separator.
+- Documented that the red radar dot represents an active NWS alert marker and the dark dot represents the radar center.
+
 ## 0.3.3
 
 ### Added

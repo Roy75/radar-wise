@@ -3,7 +3,7 @@
  * Home Assistant weather dashboard card with forecasts and optional radar.
  */
 
-const CARD_VERSION = "0.3.3";
+const CARD_VERSION = "0.3.4";
 const FORECAST_REFRESH_MS = 15 * 60 * 1000;
 const CARD_TYPES = ["weatherwise-card", "weather-wise-card"];
 
@@ -419,6 +419,7 @@ class WeatherWiseCard extends HTMLElement {
                   </div>
                 `}
                 <div class="radar-lbl" id="radar-lbl">Radar loading...</div>
+                <div class="radar-alert" id="radar-alert" hidden></div>
               </section>
             ` : ""}
           </div>
@@ -926,6 +927,7 @@ class WeatherWiseCard extends HTMLElement {
         }).addTo(group);
       }
       const headline = features[0]?.properties?.headline || `${features.length} active weather alert${features.length === 1 ? "" : "s"}`;
+      const alert = this.shadowRoot?.getElementById("radar-alert");
       window.L.circleMarker([lat, lon], {
         radius: 9,
         color: "#b91c1c",
@@ -934,7 +936,12 @@ class WeatherWiseCard extends HTMLElement {
         weight: 2
       }).bindPopup(this._escape(headline)).addTo(group);
       this._warningLayer = group.addTo(this._radarMap);
-      if (label) label.textContent = `${label.textContent} + ${features.length} alert${features.length === 1 ? "" : "s"}`;
+      if (label) label.textContent = `${label.textContent} • ${features.length} alert${features.length === 1 ? "" : "s"}`;
+      if (alert) {
+        alert.hidden = false;
+        alert.textContent = `${features.length} NWS alert${features.length === 1 ? "" : "s"} - tap red dot`;
+        alert.title = headline;
+      }
     } catch (err) {
       if (label && this._config.debug?.enabled) label.textContent = `${label.textContent} + alerts unavailable`;
     }
@@ -1276,6 +1283,8 @@ class WeatherWiseCard extends HTMLElement {
       .leaflet-control-zoom a{display:block;text-align:center;text-decoration:none}
       .leaflet-control-attribution{position:absolute;right:0;bottom:0;margin:0;padding:0 5px}
       .radar-lbl{position:absolute;bottom:10px;left:12px;font-size:12px;color:rgba(10,30,46,0.76);background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.55);padding:4px 10px;border-radius:99px;font-weight:800;z-index:1000;pointer-events:none}
+      .radar-alert{position:absolute;top:10px;left:54px;right:126px;max-width:max-content;font-size:12px;color:#7f1d1d;background:rgba(254,242,242,.9);border:1px solid rgba(185,28,28,.28);box-shadow:0 2px 10px rgba(127,29,29,.12);padding:5px 10px;border-radius:99px;font-weight:900;z-index:1000;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .radar-alert[hidden]{display:none}
       .radar-controls{position:absolute;top:10px;right:10px;display:flex;gap:6px;z-index:1001}
       .radar-controls button{width:31px;height:31px;border:1px solid rgba(255,255,255,.62);border-radius:999px;background:rgba(255,255,255,.78);color:#0a1e2e;box-shadow:0 2px 10px rgba(10,30,46,.12);font:800 15px/1 var(--ha-font-family-body,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif);display:grid;place-items:center;cursor:pointer;padding:0}
       .radar-controls button:hover{background:rgba(255,255,255,.94)}

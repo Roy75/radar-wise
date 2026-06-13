@@ -5,7 +5,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/TheWillMiller/weather-wise?label=stars)](https://github.com/TheWillMiller/weather-wise/stargazers)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-yellow?logo=buymeacoffee)](https://buymeacoffee.com/thewillmiller)
 
-**Latest release:** `v0.3.3`
+**Latest release:** `v0.3.4`
 
 WeatherWise is a Home Assistant dashboard (Lovelace) custom card for current weather, hourly and daily forecasts, precipitation details, sunrise and sunset, wind, humidity, and optional radar. It follows the TideWise/RiverWise visual language while staying a dashboard card, not a backend integration.
 
@@ -119,7 +119,7 @@ type: module
 For quick testing before installing locally, you can add this dashboard resource:
 
 ```yaml
-url: https://cdn.jsdelivr.net/gh/TheWillMiller/weather-wise@v0.3.3/weatherwise-card.js
+url: https://cdn.jsdelivr.net/gh/TheWillMiller/weather-wise@v0.3.4/weatherwise-card.js
 type: module
 ```
 
@@ -288,6 +288,10 @@ Available for custom Home Assistant dashboards, Lovelace cards, and kiosk interf
 2. Use `radar_provider: noaa` only for US radar.
 3. Use `radar_provider: envcanada` for Canada, or `radar_provider: rainviewer` for UK and global setups.
 4. Confirm the dashboard browser can reach external map/radar tile services.
+
+### What is the red dot on the radar?
+
+The red radar dot appears when the US NWS warning overlay finds an active alert near the radar location. Click or tap the red dot for the alert headline. The small dark dot is the configured radar center.
 
 ### Humidity shows `--%`
 
