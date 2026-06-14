@@ -1,0 +1,12 @@
+type: custom:radarwise-card
+entity: weather.home
+title: Local Weather
+country: global
+radar_provider: auto
+environment_source: open_meteo
+show_environment: true
+latitude: 33.688
+longitude: -78.886
+grid_options:
+  rows: full
+  columns: 18

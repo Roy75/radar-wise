@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.0
+
+### Added
+
+- Added optional Open-Meteo AQI and pollen support with no API key.
+- Added an Environment source selector in the visual editor: Home Assistant sensors, Open-Meteo, or Disabled.
+- Added hourly-cached AQI/pollen loading by the configured radar latitude/longitude.
+- Added debug panel rows for environment source, last environment update, and fetch errors.
+
+### Changed
+
+- Kept Home Assistant sensors as the default AQI/pollen source for privacy-first installs.
+- Updated README, HACS info, and troubleshooting notes for Open-Meteo mode and its latitude/longitude request.
+
 ## 0.6.0
 
 ### Added
