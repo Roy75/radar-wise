@@ -3,7 +3,7 @@
  * Home Assistant weather dashboard card with forecasts and optional radar.
  */
 
-const CARD_VERSION = "0.7.1";
+const CARD_VERSION = "0.7.2";
 const FORECAST_REFRESH_MS = 15 * 60 * 1000;
 const ENVIRONMENT_REFRESH_MS = 60 * 60 * 1000;
 const CARD_TYPES = ["radarwise-card", "radar-wise-card", "weatherwise-card", "weather-wise-card"];
@@ -117,6 +117,7 @@ const RADARWISE_TEXT = {
     weatherAlert: "Weather alert",
     activeWeatherAlert: "active weather alert",
     nwsAlertTap: "NWS alert - tap for details",
+    nwsAlertsTap: "NWS alerts - tap for details",
     severity: "Severity",
     unknown: "Unknown",
     forecastIntro: "Forecast",
@@ -196,6 +197,7 @@ const RADARWISE_TEXT = {
     weatherAlert: "Alerte météo",
     activeWeatherAlert: "alerte météo active",
     nwsAlertTap: "alerte NWS - toucher pour les détails",
+    nwsAlertsTap: "alertes NWS - toucher pour les détails",
     severity: "Gravité",
     unknown: "Inconnue",
     forecastIntro: "Prévisions",
@@ -275,6 +277,7 @@ const RADARWISE_TEXT = {
     weatherAlert: "Alerta meteorológica",
     activeWeatherAlert: "alerta meteorológica activa",
     nwsAlertTap: "alerta NWS - toca para ver detalles",
+    nwsAlertsTap: "alertas NWS - toca para ver detalles",
     severity: "Severidad",
     unknown: "Desconocida",
     forecastIntro: "Pronóstico",
@@ -354,6 +357,7 @@ const RADARWISE_TEXT = {
     weatherAlert: "Wetterwarnung",
     activeWeatherAlert: "aktive Wetterwarnung",
     nwsAlertTap: "NWS-Warnung - für Details antippen",
+    nwsAlertsTap: "NWS-Warnungen - für Details antippen",
     severity: "Schweregrad",
     unknown: "Unbekannt",
     forecastIntro: "Vorhersage",
@@ -433,6 +437,7 @@ const RADARWISE_TEXT = {
     weatherAlert: "Alerta meteorológico",
     activeWeatherAlert: "alerta meteorológico ativo",
     nwsAlertTap: "alerta NWS - toque para detalhes",
+    nwsAlertsTap: "alertas NWS - toque para detalhes",
     severity: "Severidade",
     unknown: "Desconhecida",
     forecastIntro: "Previsão",
@@ -1451,6 +1456,7 @@ class RadarWiseCard extends HTMLElement {
     if (!periods.length) return `<div class="loading-note">${_wwEscape(this._t("waitingForecast"))}</div>`;
     return periods.slice(0, Number(this._config.forecast_count) || 5).map((item) => {
       const period = item.is_daytime === undefined ? "" : item.is_daytime ? this._t("dayPeriod") : this._t("nightPeriod");
+      const range = this._forecastRange(item, units);
       return `
         <div class="fc-slot">
           <div>
@@ -1459,10 +1465,18 @@ class RadarWiseCard extends HTMLElement {
           </div>
           <div class="fc-icon">${this._icon(item.condition || item.state, 48)}</div>
           <div class="fc-temp">${this._displayTemp(item.temperature, units, false)}</div>
+          ${range ? `<div class="fc-range">${_wwEscape(range)}</div>` : ""}
           <div class="fc-precip">${this._formatPrecip(item, units)}</div>
         </div>
       `;
     }).join("");
+  }
+
+  _forecastRange(item, units) {
+    const high = this._tempValue(item?.temperature ?? item?.high_temperature ?? item?.native_temperature, units);
+    const low = this._tempValue(item?.templow ?? item?.low_temperature ?? item?.native_templow, units);
+    if (!Number.isFinite(high) || !Number.isFinite(low)) return "";
+    return `${Math.round(high)}° / ${Math.round(low)}°`;
   }
 
   _forecastSummary({ hourly, daily, twiceDaily, units, condition }) {
@@ -2171,7 +2185,7 @@ class RadarWiseCard extends HTMLElement {
         }).addTo(group);
       }
       const headline = features[0]?.properties?.headline || `${features.length} ${this._t("activeWeatherAlert")}${features.length === 1 ? "" : "s"}`;
-      const popupHtml = this._alertPopup(features[0]?.properties || { headline });
+      const popupHtml = this._alertsPopup(features);
       const marker = window.L.circleMarker([lat, lon], {
         radius: 9,
         color: "#b91c1c",
@@ -2197,7 +2211,7 @@ class RadarWiseCard extends HTMLElement {
         alert.hidden = false;
         alert.setAttribute("role", "button");
         alert.setAttribute("tabindex", "0");
-        alert.textContent = `${features.length} ${this._t("nwsAlertTap")}${features.length === 1 ? "" : "s"}`;
+        alert.textContent = `${features.length} ${this._t(features.length === 1 ? "nwsAlertTap" : "nwsAlertsTap")}`;
         alert.title = headline;
         alert.onclick = (event) => {
           event.stopPropagation();
@@ -2226,11 +2240,29 @@ class RadarWiseCard extends HTMLElement {
     return { color, fillColor: color, fillOpacity: 0.16, opacity: 0.82, weight: 2 };
   }
 
-  _alertPopup(props) {
+  _alertsPopup(features) {
+    const items = (features || [])
+      .map((feature, index) => this._alertPopup(feature?.properties || {}, index + 1, features.length))
+      .join("");
+    return items ? `<div class="alert-popup-list">${items}</div>` : this._alertPopup({});
+  }
+
+  _alertPopup(props, index = NaN, total = NaN) {
     const event = _wwEscape(props.event || this._t("weatherAlert"));
     const headline = _wwEscape(props.headline || "");
     const severity = _wwEscape(props.severity || this._t("unknown"));
-    return `<strong>${event}</strong><br>${headline}<br>${_wwEscape(this._t("severity"))}: ${severity}`;
+    const alertNumber = Number(index);
+    const alertTotal = Number(total);
+    const count = Number.isFinite(alertNumber) && Number.isFinite(alertTotal) && alertTotal > 1
+      ? `<span class="alert-popup-count">${alertNumber}/${alertTotal}</span>`
+      : "";
+    return `
+      <div class="alert-popup-item">
+        <div class="alert-popup-heading"><strong>${event}</strong>${count}</div>
+        ${headline ? `<div class="alert-popup-headline">${headline}</div>` : ""}
+        <div class="alert-popup-severity">${_wwEscape(this._t("severity"))}: ${severity}</div>
+      </div>
+    `;
   }
 
   _unitContext(attrs) {
@@ -2541,6 +2573,7 @@ class RadarWiseCard extends HTMLElement {
       .fc-icon{width:64px;height:64px;margin:4px 0 2px;display:flex;align-items:center;justify-content:center}
       .fc-icon svg{width:60px;height:60px}
       .fc-temp{font-size:48px;font-weight:900;color:var(--ww-text);letter-spacing:0;line-height:.95}
+      .fc-range{font-size:13px;font-weight:900;color:var(--ww-muted);line-height:1;min-height:14px;text-align:center;white-space:nowrap}
       .fc-precip{font-size:12px;font-weight:900;color:var(--ww-muted);line-height:1;min-height:13px;text-align:center;white-space:nowrap}
       .stats-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:6px;flex-shrink:0}
       .stat{background:var(--ww-panel);border:1px solid var(--ww-line);border-radius:12px;padding:10px 13px;display:flex;align-items:center;gap:11px;min-height:66px;min-width:0}
@@ -2614,7 +2647,14 @@ class RadarWiseCard extends HTMLElement {
       .leaflet-control-attribution{background:rgba(255,255,255,.70)!important;color:rgba(10,30,46,.72)!important}
       .leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}
       .leaflet-popup-content-wrapper{background:rgba(255,255,255,.96);color:#0a1e2e;border-radius:12px;box-shadow:0 4px 18px rgba(10,30,46,.22);border:1px solid rgba(10,30,46,.12);padding:1px;text-align:left}
-      .leaflet-popup-content{font-size:13px;line-height:1.35;margin:12px 14px;min-width:180px;max-width:260px}
+      .leaflet-popup-content{font-size:13px;line-height:1.35;margin:12px 14px;min-width:180px;max-width:320px}
+      .alert-popup-list{display:flex;flex-direction:column;gap:10px;max-height:260px;overflow:auto;overscroll-behavior:contain;padding-right:2px}
+      .alert-popup-item{min-width:0}
+      .alert-popup-item+.alert-popup-item{border-top:1px solid rgba(10,30,46,.12);padding-top:10px}
+      .alert-popup-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:900}
+      .alert-popup-count{font-size:11px;color:#7f1d1d;background:rgba(254,242,242,.86);border:1px solid rgba(185,28,28,.20);border-radius:999px;padding:1px 7px;white-space:nowrap}
+      .alert-popup-headline{margin-top:4px}
+      .alert-popup-severity{margin-top:4px;color:rgba(10,30,46,.74);font-weight:750}
       .leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin-left:-20px;overflow:hidden;pointer-events:none}
       .leaflet-popup-tip{width:14px;height:14px;padding:1px;margin:-8px auto 0;background:rgba(255,255,255,.96);transform:rotate(45deg);box-shadow:0 4px 14px rgba(10,30,46,.18)}
       .leaflet-popup-close-button{position:absolute;top:4px;right:8px;border:0;background:transparent;color:#0a1e2e;text-decoration:none;font-size:18px;font-weight:900;line-height:1;cursor:pointer}

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.2
+
+### Added
+
+- Added high/low temperature ranges to daily forecast cards when the weather provider exposes a low temperature.
+- Added a multi-alert NWS popup so tapping the radar alert pill shows every active alert, not only the first one.
+
+### Fixed
+
+- Fixed plural wording on the NWS alert pill.
+
 ## 0.7.1
 
 ### Added
