@@ -5,7 +5,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/TheWillMiller/radar-wise?label=stars)](https://github.com/TheWillMiller/radar-wise/stargazers)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-yellow?logo=buymeacoffee)](https://buymeacoffee.com/thewillmiller)
 
-**Latest release:** `v0.5.0`
+**Latest release:** `v0.5.1`
 
 RadarWise is a Home Assistant dashboard (Lovelace) custom card for current weather, hourly and daily forecasts, precipitation details, sunrise and sunset, wind, humidity, dew point, and optional radar. It follows the TideWise/RiverWise visual language while staying a dashboard card, not a backend integration.
 
@@ -124,12 +124,16 @@ type: module
 4. Refresh Home Assistant and hard-refresh your browser.
 5. Add the card to a dashboard.
 
+### Rename Compatibility
+
+RadarWise was renamed from its original project name in `v0.5.0`. If Home Assistant still has an older resource URL that points to `weatherwise-card.js`, `v0.5.1` includes a compatibility loader at that filename so the card can still register. New installs should use `radarwise-card.js`.
+
 ### Test From GitHub CDN
 
 For quick testing before installing locally, you can add this dashboard resource:
 
 ```yaml
-url: https://cdn.jsdelivr.net/gh/TheWillMiller/radar-wise@v0.5.0/radarwise-card.js
+url: https://cdn.jsdelivr.net/gh/TheWillMiller/radar-wise@v0.5.1/radarwise-card.js
 type: module
 ```
 
@@ -311,10 +315,11 @@ Available for custom Home Assistant dashboards, Lovelace cards, and kiosk interf
 ### RadarWise does not show in the card picker
 
 1. Confirm RadarWise is installed in HACS.
-2. Hard-refresh the browser.
-3. Restart Home Assistant if needed.
-4. Check that the dashboard resource exists.
-5. Open the browser console and look for RadarWise errors.
+2. Confirm the loaded resource points to `/hacsfiles/.../radarwise-card.js` or the compatibility `/hacsfiles/.../weatherwise-card.js`.
+3. Hard-refresh the browser.
+4. Restart Home Assistant if needed.
+5. Check that the dashboard resource exists.
+6. Open the browser console and look for RadarWise errors.
 
 ### Forecast data unavailable
 

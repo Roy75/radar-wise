@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1
+
+### Fixed
+
+- Restored `weatherwise-card.js` as a compatibility loader so existing HACS/manual resources keep loading RadarWise after the rename.
+- Updated the frontend check workflow to validate both the new RadarWise file and the compatibility loader.
+
 ## 0.5.0
 
 ### Added

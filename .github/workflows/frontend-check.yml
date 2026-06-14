@@ -20,4 +20,6 @@ jobs:
           node-version: "20"
 
       - name: JavaScript syntax check
-        run: node --check radarwise-card.js
+        run: |
+          node --check radarwise-card.js
+          node --check weatherwise-card.js
