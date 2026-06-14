@@ -5,9 +5,9 @@
 [![GitHub stars](https://img.shields.io/github/stars/TheWillMiller/radar-wise?label=stars)](https://github.com/TheWillMiller/radar-wise/stargazers)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-yellow?logo=buymeacoffee)](https://buymeacoffee.com/thewillmiller)
 
-**Latest release:** `v0.5.1`
+**Latest release:** `v0.6.0`
 
-RadarWise is a Home Assistant dashboard (Lovelace) custom card for current weather, hourly and daily forecasts, precipitation details, sunrise and sunset, wind, humidity, dew point, and optional radar. It follows the TideWise/RiverWise visual language while staying a dashboard card, not a backend integration.
+RadarWise is a Home Assistant dashboard (Lovelace) custom card for current weather, hourly and daily forecasts, precipitation details, sunrise and sunset, wind, humidity, dew point, optional AQI/pollen sensors, and optional radar. It follows the TideWise/RiverWise visual language while staying a dashboard card, not a backend integration.
 
 ![RadarWise dashboard preview](https://raw.githubusercontent.com/TheWillMiller/radar-wise/main/docs/preview.png)
 
@@ -53,6 +53,8 @@ If you are testing from Australia, New Zealand, Europe, or any other region, ple
 - Optional local temperature sensor override
 - Optional humidity sensor fallback
 - Optional dew point sensor fallback
+- Optional AQI sensor tile beside the clock
+- Optional pollen summary tile with tree, grass, weed, and mold sensor support
 - Optional localized forecast summary ticker
 - Hourly forecast strip
 - Daily or twice-daily forecast cards
@@ -126,14 +128,14 @@ type: module
 
 ### Rename Compatibility
 
-RadarWise was renamed from its original project name in `v0.5.0`. If Home Assistant still has an older resource URL that points to `weatherwise-card.js`, `v0.5.1` includes a compatibility loader at that filename so the card can still register. New installs should use `radarwise-card.js`.
+RadarWise was renamed from its original project name in `v0.5.0`. If Home Assistant still has an older resource URL that points to `weatherwise-card.js`, `v0.5.1` and later include a compatibility loader at that filename so the card can still register. New installs should use `radarwise-card.js`.
 
 ### Test From GitHub CDN
 
 For quick testing before installing locally, you can add this dashboard resource:
 
 ```yaml
-url: https://cdn.jsdelivr.net/gh/TheWillMiller/radar-wise@v0.5.1/radarwise-card.js
+url: https://cdn.jsdelivr.net/gh/TheWillMiller/radar-wise@v0.6.0/radarwise-card.js
 type: module
 ```
 
@@ -217,6 +219,7 @@ RadarWise includes a Home Assistant visual editor. When adding the card from the
 - Choose an optional local temperature sensor when the weather entity is not local enough
 - Choose an optional humidity sensor when the weather entity does not expose humidity
 - Choose an optional dew point sensor when the weather entity does not expose dew point
+- Choose optional AQI and pollen sensors when Home Assistant already has them
 - Choose United States, Canada, United Kingdom, or global/other setup
 - Choose automatic radar, NOAA radar, RainViewer radar, or no radar
 - Choose radar timeline, style, map style, and radar loop speed
@@ -258,6 +261,12 @@ Radar location and map controls:
 | `temperature_entity` | No |  | Optional temperature sensor/helper entity for the current displayed temperature. Useful when an indoor, patio, or hyperlocal sensor differs from the weather provider. |
 | `humidity_entity` | No |  | Optional humidity sensor/helper entity. Useful when the weather entity has no humidity attribute. |
 | `dew_point_entity` | No |  | Optional dew point sensor/helper entity. RadarWise also auto-reads common dew point attributes from the weather entity when available. |
+| `air_quality_entity` | No |  | Optional AQI/air-quality sensor or helper entity. Displays beside the clock/date when configured. |
+| `pollen_entity` | No |  | Optional general pollen sensor/helper entity. |
+| `tree_pollen_entity` | No |  | Optional tree pollen sensor/helper entity used in the pollen summary. |
+| `grass_pollen_entity` | No |  | Optional grass pollen sensor/helper entity used in the pollen summary. |
+| `weed_pollen_entity` | No |  | Optional weed pollen sensor/helper entity used in the pollen summary. |
+| `mold_pollen_entity` | No |  | Optional mold sensor/helper entity used in the pollen summary. |
 | `title` | No | `Local Weather` | Card title. |
 | `country` | No | `us` | Region hint: `us`, `ca`, `uk`, or `global`. |
 | `radar_provider` | No | `auto` | `auto`, `noaa`, `envcanada`, `rainviewer`, or `none`. |
@@ -268,6 +277,7 @@ Radar location and map controls:
 | `hourly_count` | No | `5` | Number of hourly/forecast-list rows, 1-24. If hourly forecasts are unavailable, RadarWise falls back to twice-daily or daily data. |
 | `forecast_count` | No | `5` | Number of daily/twice-daily forecast cards, 1-7. |
 | `show_forecast_summary` | No | `true` | Show or hide the one-line forecast summary under the date. The text is generated from existing forecast data, localized by `language`, and respects reduced-motion settings. |
+| `show_environment` | No | `true` | Show or hide the optional AQI/pollen cluster beside the clock/date. Nothing appears unless at least one AQI or pollen sensor is configured. |
 | `show_timeline` | No | `true` | Show or hide the left hourly/forecast list. |
 | `show_forecast` | No | `true` | Show or hide the daily/twice-daily forecast card strip. |
 | `timeline_autoscroll` | No | `false` | Slowly auto-scroll long forecast lists. Manual scrolling pauses it briefly. |
@@ -351,6 +361,13 @@ The red radar dot appears when the US NWS warning overlay finds an active alert 
 2. If it does not, choose a dew point sensor in the visual editor.
 3. Or set `dew_point_entity: sensor.your_dew_point_sensor` in YAML.
 
+### AQI or pollen does not show
+
+1. Confirm you have an AQI, pollen, allergy, tree pollen, grass pollen, weed pollen, or mold sensor in Home Assistant.
+2. Choose the sensor in the visual editor under **Environment sensors**.
+3. Or set `air_quality_entity`, `pollen_entity`, `tree_pollen_entity`, `grass_pollen_entity`, `weed_pollen_entity`, or `mold_pollen_entity` in YAML.
+4. RadarWise does not fetch AQI or pollen from a web API. It only displays sensor entities already available in Home Assistant.
+
 ### What do the blue bars show?
 
 The blue bars in the forecast list show relative temperature across the visible rows. Longer bars are warmer compared with the other rows currently shown. If your weather provider exposes precipitation probability or amount, RadarWise also shows that beside the bar.
@@ -363,7 +380,7 @@ RadarWise intentionally uses Home Assistant weather entities instead of direct a
 
 RadarWise does not include telemetry, tracking pixels, external analytics, or phone-home behavior.
 
-When radar is enabled, the browser viewing the dashboard loads map/radar tiles from the selected provider. The card does not send weather entity data to a RadarWise server.
+When radar is enabled, the browser viewing the dashboard loads map/radar tiles from the selected provider. Optional AQI and pollen readings come from your Home Assistant sensor entities. The card does not send weather entity data to a RadarWise server.
 
 ## Safety
 

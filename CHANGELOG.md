@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.0
+
+### Added
+
+- Added optional AQI and pollen support using existing Home Assistant sensors or helpers.
+- Added visual editor selectors for air quality, general pollen, tree pollen, grass pollen, weed pollen, and mold sensors.
+- Added a compact environment cluster beside the clock/date so AQI and pollen can appear above the hourly forecast list without crowding the main weather stats.
+- Added localized AQI and pollen labels/severity text for the supported card languages.
+
+### Changed
+
+- Kept AQI and pollen entity-driven only. RadarWise does not call outside air quality or pollen APIs.
+- Updated release docs, configuration notes, and tester prompts for `v0.6.0`.
+
 ## 0.5.1
 
 ### Fixed

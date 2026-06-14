@@ -2,7 +2,7 @@
 
 Weather dashboard custom card for Home Assistant.
 
-RadarWise shows current weather, hourly and daily forecasts, sunrise and sunset, wind, humidity, dew point, and optional radar using an existing Home Assistant `weather` entity.
+RadarWise shows current weather, hourly and daily forecasts, sunrise and sunset, wind, humidity, dew point, optional AQI/pollen sensor tiles, and optional radar using existing Home Assistant entities.
 
 It supports United States, Canada, United Kingdom, and global/other dashboard setups. US cards use NOAA radar by default. Canada uses Environment Canada radar by default. UK and global cards use RainViewer global radar by default.
 

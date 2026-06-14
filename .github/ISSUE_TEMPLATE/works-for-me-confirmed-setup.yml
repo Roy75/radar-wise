@@ -9,7 +9,7 @@ body:
     id: radarwise_version
     attributes:
       label: RadarWise version
-      placeholder: v0.5.1
+      placeholder: v0.6.0
     validations:
       required: true
   - type: input

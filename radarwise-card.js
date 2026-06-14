@@ -3,7 +3,7 @@
  * Home Assistant weather dashboard card with forecasts and optional radar.
  */
 
-const CARD_VERSION = "0.5.1";
+const CARD_VERSION = "0.6.0";
 const FORECAST_REFRESH_MS = 15 * 60 * 1000;
 const CARD_TYPES = ["radarwise-card", "radar-wise-card", "weatherwise-card", "weather-wise-card"];
 
@@ -74,6 +74,21 @@ const RADARWISE_TEXT = {
     nightPeriod: "Night",
     humidity: "Humidity",
     dewPoint: "Dew Point",
+    airQuality: "Air Quality",
+    pollen: "Pollen",
+    treePollen: "Tree Pollen",
+    grassPollen: "Grass Pollen",
+    weedPollen: "Weed Pollen",
+    moldPollen: "Mold",
+    good: "Good",
+    low: "Low",
+    moderate: "Moderate",
+    high: "High",
+    veryHigh: "Very High",
+    unhealthySensitive: "Unhealthy for Sensitive Groups",
+    unhealthy: "Unhealthy",
+    veryUnhealthy: "Very Unhealthy",
+    hazardous: "Hazardous",
     wind: "Wind",
     sunrise: "Sunrise",
     sunset: "Sunset",
@@ -136,6 +151,21 @@ const RADARWISE_TEXT = {
     nightPeriod: "Nuit",
     humidity: "Humidité",
     dewPoint: "Point de rosée",
+    airQuality: "Qualite de l'air",
+    pollen: "Pollen",
+    treePollen: "Pollen des arbres",
+    grassPollen: "Pollen de graminees",
+    weedPollen: "Pollen de mauvaises herbes",
+    moldPollen: "Moisissures",
+    good: "Bon",
+    low: "Faible",
+    moderate: "Modere",
+    high: "Eleve",
+    veryHigh: "Tres eleve",
+    unhealthySensitive: "Mauvais pour les personnes sensibles",
+    unhealthy: "Mauvais",
+    veryUnhealthy: "Tres mauvais",
+    hazardous: "Dangereux",
     wind: "Vent",
     sunrise: "Lever du soleil",
     sunset: "Coucher du soleil",
@@ -198,6 +228,21 @@ const RADARWISE_TEXT = {
     nightPeriod: "Noche",
     humidity: "Humedad",
     dewPoint: "Punto de rocío",
+    airQuality: "Calidad del aire",
+    pollen: "Polen",
+    treePollen: "Polen de arboles",
+    grassPollen: "Polen de pastos",
+    weedPollen: "Polen de malezas",
+    moldPollen: "Moho",
+    good: "Buena",
+    low: "Bajo",
+    moderate: "Moderado",
+    high: "Alto",
+    veryHigh: "Muy alto",
+    unhealthySensitive: "Dano para grupos sensibles",
+    unhealthy: "Dano",
+    veryUnhealthy: "Muy danino",
+    hazardous: "Peligroso",
     wind: "Viento",
     sunrise: "Amanecer",
     sunset: "Atardecer",
@@ -260,6 +305,21 @@ const RADARWISE_TEXT = {
     nightPeriod: "Nacht",
     humidity: "Luftfeuchtigkeit",
     dewPoint: "Taupunkt",
+    airQuality: "Luftqualitat",
+    pollen: "Pollen",
+    treePollen: "Baumpollen",
+    grassPollen: "Graspollen",
+    weedPollen: "Krautpollen",
+    moldPollen: "Schimmel",
+    good: "Gut",
+    low: "Niedrig",
+    moderate: "Moderat",
+    high: "Hoch",
+    veryHigh: "Sehr hoch",
+    unhealthySensitive: "Ungesund fur empfindliche Gruppen",
+    unhealthy: "Ungesund",
+    veryUnhealthy: "Sehr ungesund",
+    hazardous: "Gefahrlich",
     wind: "Wind",
     sunrise: "Sonnenaufgang",
     sunset: "Sonnenuntergang",
@@ -322,6 +382,21 @@ const RADARWISE_TEXT = {
     nightPeriod: "Noite",
     humidity: "Humidade",
     dewPoint: "Ponto de orvalho",
+    airQuality: "Qualidade do ar",
+    pollen: "Polen",
+    treePollen: "Polen de arvores",
+    grassPollen: "Polen de graminias",
+    weedPollen: "Polen de ervas",
+    moldPollen: "Bolor",
+    good: "Boa",
+    low: "Baixo",
+    moderate: "Moderado",
+    high: "Alto",
+    veryHigh: "Muito alto",
+    unhealthySensitive: "Mau para grupos sensiveis",
+    unhealthy: "Mau",
+    veryUnhealthy: "Muito mau",
+    hazardous: "Perigoso",
     wind: "Vento",
     sunrise: "Nascer do sol",
     sunset: "Pôr do sol",
@@ -413,6 +488,37 @@ function isRadarWiseDewPointEntity(entityId, state) {
     || (looksLikeTemperature && (id.includes("dew") || friendly.includes("dew")));
 }
 
+function isRadarWiseAirQualityEntity(entityId, state) {
+  if (!entityId) return false;
+  const attrs = state?.attributes || {};
+  const friendly = String(attrs.friendly_name || "").toLowerCase();
+  const deviceClass = String(attrs.device_class || "").toLowerCase();
+  const unit = String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || "").toLowerCase();
+  const id = String(entityId).toLowerCase();
+  const haystack = `${id} ${friendly} ${deviceClass} ${unit}`;
+  return haystack.includes("aqi")
+    || haystack.includes("air_quality")
+    || haystack.includes("air quality")
+    || haystack.includes("pm2.5")
+    || haystack.includes("pm25")
+    || haystack.includes("pm_2_5")
+    || haystack.includes("particulate");
+}
+
+function isRadarWisePollenEntity(entityId, state, kind = "") {
+  if (!entityId) return false;
+  const attrs = state?.attributes || {};
+  const friendly = String(attrs.friendly_name || "").toLowerCase();
+  const deviceClass = String(attrs.device_class || "").toLowerCase();
+  const unit = String(attrs.unit_of_measurement || attrs.native_unit_of_measurement || "").toLowerCase();
+  const id = String(entityId).toLowerCase();
+  const haystack = `${id} ${friendly} ${deviceClass} ${unit}`;
+  const pollenish = haystack.includes("pollen") || haystack.includes("allergy") || haystack.includes("allergen");
+  if (!kind) return pollenish;
+  const source = String(kind).toLowerCase();
+  return pollenish && (haystack.includes(source) || haystack.includes(`${source}_pollen`) || haystack.includes(`${source} pollen`));
+}
+
 class RadarWiseCard extends HTMLElement {
   static getStubConfig() {
     return {
@@ -421,6 +527,12 @@ class RadarWiseCard extends HTMLElement {
       humidity_entity: "",
       temperature_entity: "",
       dew_point_entity: "",
+      air_quality_entity: "",
+      pollen_entity: "",
+      tree_pollen_entity: "",
+      grass_pollen_entity: "",
+      weed_pollen_entity: "",
+      mold_pollen_entity: "",
       title: "Local Weather",
       country: "us",
       radar_provider: "auto",
@@ -433,6 +545,7 @@ class RadarWiseCard extends HTMLElement {
       show_timeline: true,
       show_forecast: true,
       show_forecast_summary: true,
+      show_environment: true,
       show_radar: true,
       show_map_controls: true,
       radar_controls: true,
@@ -597,6 +710,12 @@ class RadarWiseCard extends HTMLElement {
       humidity_entity: "",
       temperature_entity: "",
       dew_point_entity: "",
+      air_quality_entity: "",
+      pollen_entity: "",
+      tree_pollen_entity: "",
+      grass_pollen_entity: "",
+      weed_pollen_entity: "",
+      mold_pollen_entity: "",
       country: RADARWISE_COUNTRIES[country] ? country : "global",
       radar_provider: RADARWISE_RADAR[radarProvider] ? radarProvider : "auto",
       theme_mode: themeMode,
@@ -606,6 +725,7 @@ class RadarWiseCard extends HTMLElement {
       show_timeline: true,
       show_forecast: true,
       show_forecast_summary: true,
+      show_environment: true,
       show_radar: true,
       show_map_controls: true,
       radar_controls: true,
@@ -630,6 +750,7 @@ class RadarWiseCard extends HTMLElement {
       show_timeline: config.show_timeline !== false,
       show_forecast: config.show_forecast !== false,
       show_forecast_summary: config.show_forecast_summary !== false,
+      show_environment: config.show_environment !== false,
       show_radar: config.show_radar !== false,
       show_map_controls: config.show_map_controls !== false,
       radar_controls: config.radar_controls !== false,
@@ -668,6 +789,12 @@ class RadarWiseCard extends HTMLElement {
       humidityEntity: this._config.humidity_entity,
       temperatureEntity: this._config.temperature_entity,
       dewPointEntity: this._config.dew_point_entity,
+      airQualityEntity: this._config.air_quality_entity,
+      pollenEntity: this._config.pollen_entity,
+      treePollenEntity: this._config.tree_pollen_entity,
+      grassPollenEntity: this._config.grass_pollen_entity,
+      weedPollenEntity: this._config.weed_pollen_entity,
+      moldPollenEntity: this._config.mold_pollen_entity,
       state: stateObj?.state,
       updated: stateObj?.last_updated,
       temp: attrs.temperature,
@@ -676,6 +803,12 @@ class RadarWiseCard extends HTMLElement {
       humidityState: this._config.humidity_entity ? this._hass?.states?.[this._config.humidity_entity]?.state : undefined,
       dewPoint: attrs.dew_point ?? attrs.dewpoint ?? attrs.dewPoint,
       dewPointState: this._config.dew_point_entity ? this._hass?.states?.[this._config.dew_point_entity]?.state : undefined,
+      airQualityState: this._config.air_quality_entity ? this._hass?.states?.[this._config.air_quality_entity]?.state : undefined,
+      pollenState: this._config.pollen_entity ? this._hass?.states?.[this._config.pollen_entity]?.state : undefined,
+      treePollenState: this._config.tree_pollen_entity ? this._hass?.states?.[this._config.tree_pollen_entity]?.state : undefined,
+      grassPollenState: this._config.grass_pollen_entity ? this._hass?.states?.[this._config.grass_pollen_entity]?.state : undefined,
+      weedPollenState: this._config.weed_pollen_entity ? this._hass?.states?.[this._config.weed_pollen_entity]?.state : undefined,
+      moldPollenState: this._config.mold_pollen_entity ? this._hass?.states?.[this._config.mold_pollen_entity]?.state : undefined,
       wind: attrs.wind_speed,
       bearing: attrs.wind_bearing,
       forecast: [
@@ -698,6 +831,7 @@ class RadarWiseCard extends HTMLElement {
         this._config.show_timeline,
         this._config.show_forecast,
         this._config.show_forecast_summary,
+        this._config.show_environment,
         this._config.radar_controls,
         this._config.show_warning_overlay,
         this._config.hourly_count,
@@ -797,6 +931,7 @@ class RadarWiseCard extends HTMLElement {
     const provider = this._resolvedRadarProvider();
     const layout = this._config.layout || "auto";
     const forecastSummary = this._forecastSummary({ hourly, daily, twiceDaily, units, condition: displayCondition });
+    const environmentTiles = this._renderEnvironmentTiles();
 
     this.shadowRoot.innerHTML = `
       <style>${this._styles()}</style>
@@ -812,11 +947,16 @@ class RadarWiseCard extends HTMLElement {
 })()}--ww-hourly-count:${Math.max(1, Math.min(24, Number(this._config.hourly_count) || 5))};--ww-forecast-count:${Math.max(1, Math.min(7, Number(this._config.forecast_count) || 5))}">
             <section class="left">
               <div class="clock-panel">
-                <div class="clock-row">
-                  <div class="clock-time" id="clock-time">${this._clockTime(now)}</div>
-                  <div class="clock-ampm" id="clock-ampm">${now.getHours() >= 12 ? this._t("pm") : this._t("am")}</div>
+                <div class="clock-context ${environmentTiles ? "" : "no-env"}">
+                  <div class="clock-main">
+                    <div class="clock-row">
+                      <div class="clock-time" id="clock-time">${this._clockTime(now)}</div>
+                      <div class="clock-ampm" id="clock-ampm">${now.getHours() >= 12 ? this._t("pm") : this._t("am")}</div>
+                    </div>
+                    <div class="clock-date" id="clock-date">${this._longDate(now)}</div>
+                  </div>
+                  ${environmentTiles ? `<div class="environment-strip">${environmentTiles}</div>` : ""}
                 </div>
-                <div class="clock-date" id="clock-date">${this._longDate(now)}</div>
                 ${this._config.show_forecast_summary === false ? "" : `<div class="forecast-summary" title="${_wwEscape(forecastSummary)}"><span class="forecast-summary-text">${_wwEscape(forecastSummary)}</span></div>`}
               </div>
               ${this._config.show_timeline === false ? "" : `
@@ -912,6 +1052,12 @@ class RadarWiseCard extends HTMLElement {
       ["Temperature entity", this._config.temperature_entity || "auto"],
       ["Humidity entity", this._config.humidity_entity || "auto"],
       ["Dew point entity", this._config.dew_point_entity || "auto"],
+      ["Air quality entity", this._config.air_quality_entity || "none"],
+      ["Pollen entity", this._config.pollen_entity || "none"],
+      ["Tree pollen entity", this._config.tree_pollen_entity || "none"],
+      ["Grass pollen entity", this._config.grass_pollen_entity || "none"],
+      ["Weed pollen entity", this._config.weed_pollen_entity || "none"],
+      ["Mold pollen entity", this._config.mold_pollen_entity || "none"],
       ["Country", this._config.country],
       ["Radar", data.provider],
       ["Units", data.units.temperatureUnit],
@@ -1077,6 +1223,134 @@ class RadarWiseCard extends HTMLElement {
       sunset: `<svg viewBox="0 0 24 24" fill="none"><path d="M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 15a5 5 0 0 1 10 0" fill="#f59e0b"/><path d="M12 8V4M5 11l3 1M19 11l-3 1" stroke="#7c3aed" stroke-width="2" stroke-linecap="round"/></svg>`
     };
     return `<div class="stat"><div class="stat-ico" aria-hidden="true">${icons[kind]}</div><div><div class="stat-lbl">${label}</div><div class="stat-val">${_wwEscape(value || "--")}</div></div></div>`;
+  }
+
+  _renderEnvironmentTiles() {
+    if (this._config.show_environment === false) return "";
+    const tiles = [this._airQualityTile(), this._pollenTile()].filter(Boolean);
+    return tiles.map((tile) => `
+      <div class="env-tile env-${_wwEscape(tile.level || "neutral")}">
+        <div class="env-ico" aria-hidden="true">${this._environmentIcon(tile.kind)}</div>
+        <div class="env-copy">
+          <div class="env-lbl">${_wwEscape(tile.label)}</div>
+          <div class="env-val">${_wwEscape(tile.value)}</div>
+          <div class="env-note">${_wwEscape(tile.note)}</div>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  _airQualityTile() {
+    const state = this._entityState(this._config.air_quality_entity, isRadarWiseAirQualityEntity);
+    if (!state) return null;
+    const severity = this._airQualitySeverity(state.state);
+    return {
+      kind: "aqi",
+      label: this._t("airQuality"),
+      value: this._formatSensorState(state, "AQI"),
+      note: this._t(severity.key),
+      level: severity.level
+    };
+  }
+
+  _pollenTile() {
+    const entries = [
+      { configKey: "pollen_entity", labelKey: "pollen", kind: "" },
+      { configKey: "tree_pollen_entity", labelKey: "treePollen", kind: "tree" },
+      { configKey: "grass_pollen_entity", labelKey: "grassPollen", kind: "grass" },
+      { configKey: "weed_pollen_entity", labelKey: "weedPollen", kind: "weed" },
+      { configKey: "mold_pollen_entity", labelKey: "moldPollen", kind: "mold" }
+    ].map((entry) => {
+      const state = this._entityState(this._config[entry.configKey], (entityId, entityState) => isRadarWisePollenEntity(entityId, entityState, entry.kind));
+      if (!state) return null;
+      const severity = this._pollenSeverity(state.state);
+      return {
+        ...entry,
+        state,
+        severity,
+        value: this._formatSensorState(state),
+        rank: severity.rank
+      };
+    }).filter(Boolean);
+
+    if (!entries.length) return null;
+    const generic = entries.find((entry) => entry.configKey === "pollen_entity");
+    const strongestSource = entries
+      .filter((entry) => entry.configKey !== "pollen_entity")
+      .sort((a, b) => b.rank - a.rank)[0];
+    const chosen = generic || strongestSource || entries[0];
+    const sourceNote = generic && strongestSource && strongestSource.rank >= 3
+      ? `${this._t(strongestSource.labelKey)}: ${this._t(strongestSource.severity.key)}`
+      : this._t(chosen.severity.key);
+
+    return {
+      kind: "pollen",
+      label: generic ? this._t("pollen") : this._t(chosen.labelKey),
+      value: chosen.value,
+      note: sourceNote,
+      level: (strongestSource || chosen).severity.level
+    };
+  }
+
+  _entityState(entityId, predicate) {
+    if (!entityId) return null;
+    const state = this._hass?.states?.[entityId];
+    if (!state || state.state === "unknown" || state.state === "unavailable") return null;
+    return predicate(entityId, state) ? state : null;
+  }
+
+  _formatSensorState(state, fallbackUnit = "") {
+    const raw = state?.state;
+    const unit = state?.attributes?.unit_of_measurement || state?.attributes?.native_unit_of_measurement || fallbackUnit;
+    const number = this._numberOr(raw, NaN);
+    if (Number.isFinite(number)) {
+      const rounded = Math.abs(number) < 10 ? Math.round(number * 10) / 10 : Math.round(number);
+      const unitText = unit ? ` ${unit}` : "";
+      return `${rounded}${unitText}`.trim();
+    }
+    return this._titleCase(raw);
+  }
+
+  _airQualitySeverity(value) {
+    const raw = String(value || "").toLowerCase();
+    const number = this._numberOr(value, NaN);
+    if (Number.isFinite(number)) {
+      if (number <= 50) return { key: "good", level: "good", rank: 1 };
+      if (number <= 100) return { key: "moderate", level: "moderate", rank: 2 };
+      if (number <= 150) return { key: "unhealthySensitive", level: "sensitive", rank: 3 };
+      if (number <= 200) return { key: "unhealthy", level: "unhealthy", rank: 4 };
+      if (number <= 300) return { key: "veryUnhealthy", level: "very-high", rank: 5 };
+      return { key: "hazardous", level: "hazardous", rank: 6 };
+    }
+    if (raw.includes("hazard")) return { key: "hazardous", level: "hazardous", rank: 6 };
+    if (raw.includes("very") && raw.includes("unhealthy")) return { key: "veryUnhealthy", level: "very-high", rank: 5 };
+    if (raw.includes("unhealthy")) return { key: "unhealthy", level: "unhealthy", rank: 4 };
+    if (raw.includes("moderate")) return { key: "moderate", level: "moderate", rank: 2 };
+    if (raw.includes("good")) return { key: "good", level: "good", rank: 1 };
+    return { key: "unknown", level: "neutral", rank: 0 };
+  }
+
+  _pollenSeverity(value) {
+    const raw = String(value || "").toLowerCase();
+    const number = this._numberOr(value, NaN);
+    if (Number.isFinite(number)) {
+      if (number <= 2.4) return { key: "low", level: "good", rank: 1 };
+      if (number <= 4.8) return { key: "moderate", level: "moderate", rank: 2 };
+      if (number <= 7.2) return { key: "high", level: "unhealthy", rank: 3 };
+      return { key: "veryHigh", level: "very-high", rank: 4 };
+    }
+    if (raw.includes("very") || raw.includes("extreme")) return { key: "veryHigh", level: "very-high", rank: 4 };
+    if (raw.includes("high")) return { key: "high", level: "unhealthy", rank: 3 };
+    if (raw.includes("moderate") || raw.includes("medium")) return { key: "moderate", level: "moderate", rank: 2 };
+    if (raw.includes("low")) return { key: "low", level: "good", rank: 1 };
+    return { key: "unknown", level: "neutral", rank: 0 };
+  }
+
+  _environmentIcon(kind) {
+    if (kind === "aqi") {
+      return `<svg viewBox="0 0 24 24" fill="none"><path d="M4 14c2.6-3.2 5.4-3.2 8 0s5.4 3.2 8 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 9c2.3-2.6 4.7-2.6 7 0s4.7 2.6 7 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".65"/><circle cx="7" cy="18" r="1.6" fill="#65b8df"/><circle cx="13" cy="18" r="1.6" fill="#e8b84b"/><circle cx="19" cy="18" r="1.6" fill="#f97316"/></svg>`;
+    }
+    return `<svg viewBox="0 0 24 24" fill="none"><path d="M12 20c0-7 2.5-12 7-15" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M12 14C8.5 14 6 11.5 6 8c3.8 0 6 2.5 6 6Z" fill="#7ecb8f"/><path d="M13 12c3.4-.2 5.5-2.2 5.8-5.6-3.2.2-5.4 2.1-5.8 5.6Z" fill="#9bd779"/><path d="M8 18h8" stroke="#e8b84b" stroke-width="2" stroke-linecap="round"/></svg>`;
   }
 
   async _initRadar(provider) {
@@ -1832,10 +2106,26 @@ class RadarWiseCard extends HTMLElement {
       .left{min-width:0;display:flex;flex-direction:column;padding:18px 22px 10px;background:linear-gradient(90deg,rgba(255,255,255,0.20),rgba(255,255,255,0.08));border-right:1px solid rgba(255,255,255,0.22);overflow:hidden;order:var(--ww-left-order,1)}
       .center{order:var(--ww-center-order,2)}.right{order:var(--ww-right-order,3)}
       .clock-panel{flex-shrink:0}
+      .clock-context{display:grid;grid-template-columns:minmax(0,1fr) minmax(116px,.82fr);align-items:start;gap:10px;margin-bottom:12px}
+      .clock-context.no-env{display:block;margin-bottom:0}
+      .clock-main{min-width:0}
       .clock-row{display:flex;align-items:baseline;gap:8px;line-height:1}
       .clock-time{font-size:78px;font-weight:550;color:var(--ww-text);letter-spacing:0}
       .clock-ampm{font-size:22px;font-weight:850;color:var(--ww-muted)}
-      .clock-date{font-size:19px;color:var(--ww-muted);font-weight:850;margin-top:10px;margin-bottom:16px}
+      .clock-date{font-size:19px;color:var(--ww-muted);font-weight:850;margin-top:10px;margin-bottom:0}
+      .clock-context.no-env .clock-date{margin-bottom:16px}
+      .environment-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:8px;min-width:0}
+      .env-tile{display:grid;grid-template-columns:25px minmax(0,1fr);align-items:center;gap:8px;min-width:0;min-height:56px;padding:8px 9px;border-radius:12px;background:rgba(255,255,255,.25);border:1px solid var(--ww-line);box-shadow:inset 0 1px 0 rgba(255,255,255,.22)}
+      .env-ico{width:25px;height:25px;color:var(--ww-wave);display:grid;place-items:center}
+      .env-ico svg{width:25px;height:25px}
+      .env-copy{min-width:0}
+      .env-lbl{font-size:10px;line-height:1.05;color:var(--ww-muted);font-weight:900;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .env-val{font-size:16px;line-height:1.05;color:var(--ww-text);font-weight:950;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .env-note{font-size:10px;line-height:1.05;color:var(--ww-muted);font-weight:850;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .env-good{border-color:rgba(34,197,94,.24)}.env-good .env-note{color:#166534}
+      .env-moderate{border-color:rgba(234,179,8,.28)}.env-moderate .env-note{color:#854d0e}
+      .env-sensitive,.env-unhealthy,.env-very-high,.env-hazardous{border-color:rgba(185,28,28,.30);background:rgba(254,242,242,.32)}
+      .env-sensitive .env-note,.env-unhealthy .env-note,.env-very-high .env-note,.env-hazardous .env-note{color:#7f1d1d}
       .forecast-summary{container-type:inline-size;margin:0 0 14px;min-height:30px;max-width:100%;overflow:hidden;border:1px solid var(--ww-line);border-radius:999px;background:rgba(255,255,255,.20);box-shadow:inset 0 1px 0 rgba(255,255,255,.20);mask-image:linear-gradient(90deg,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%)}
       .forecast-summary-text{display:inline-block;padding:7px 18px;font-size:13px;line-height:1.15;color:var(--ww-muted);font-weight:900;white-space:nowrap}
       :host([animations]) .forecast-summary-text{animation:ww-summary-drift 34s linear infinite}
@@ -1954,6 +2244,7 @@ class RadarWiseCard extends HTMLElement {
       .card-grid.layout-wide_panel{height:var(--radarwise-card-height,clamp(390px,22cqw,500px))}
       .card-grid.layout-stacked,.card-grid.layout-compact{display:flex;flex-direction:column;height:auto;max-height:none}.card-grid.layout-stacked .left,.card-grid.layout-compact .left{display:contents}.card-grid.layout-stacked .clock-panel,.card-grid.layout-compact .clock-panel{order:1;padding:18px 22px 0;background:linear-gradient(90deg,rgba(255,255,255,0.20),rgba(255,255,255,0.08))}.card-grid.layout-stacked .center,.card-grid.layout-compact .center{order:var(--ww-ord-weather,20);border-right:0;overflow:visible}.card-grid.layout-stacked .left>.section-title,.card-grid.layout-compact .left>.section-title{order:var(--ww-ord-clock-title,12);padding:0 22px;margin-top:4px}.card-grid.layout-stacked .hourly-left,.card-grid.layout-compact .hourly-left{order:var(--ww-ord-clock-hourly,13);flex:none;overflow:visible;padding:0 22px 16px}.card-grid.layout-stacked .right,.card-grid.layout-compact .right{order:var(--ww-ord-radar,30);border-top:1px solid rgba(255,255,255,0.28);border-radius:0 0 22px 22px}.card-grid.layout-stacked .right,.card-grid.layout-stacked #rmap{height:300px;min-height:300px}.card-grid.layout-compact .right,.card-grid.layout-compact #rmap{height:220px;min-height:220px}.card-grid.layout-compact .daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));min-height:150px}.card-grid.layout-compact .fc-slot:nth-child(n+4){display:none}
       @container(max-width:720px){.card-grid:not(.layout-wide_panel),.card-grid.no-radar:not(.layout-wide_panel){display:flex;flex-direction:column;height:auto;max-height:none}.card-grid:not(.layout-wide_panel) .left{display:contents}.card-grid:not(.layout-wide_panel) .clock-panel{order:1;padding:18px 20px 0}.card-grid:not(.layout-wide_panel) .center{order:var(--ww-ord-weather,20);border-right:0;overflow:visible}.card-grid:not(.layout-wide_panel) .left>.section-title{order:var(--ww-ord-clock-title,12);padding:0 20px}.card-grid:not(.layout-wide_panel) .hourly-left{order:var(--ww-ord-clock-hourly,13);flex:none;overflow:visible;padding:0 20px 16px}.card-grid:not(.layout-wide_panel) .right{order:var(--ww-ord-radar,30)}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.card-grid:not(.layout-wide_panel) .daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{height:300px;min-height:300px}.card-grid.layout-wide_panel{display:grid;grid-template-columns:minmax(120px,24%) minmax(230px,1fr) minmax(150px,28%);height:360px;max-height:360px}.card-grid.layout-wide_panel .left{display:flex;padding:12px 10px}.card-grid.layout-wide_panel .center{padding:12px 10px}.card-grid.layout-wide_panel .clock-time{font-size:38px}.card-grid.layout-wide_panel .clock-date{font-size:12px;margin:5px 0 7px}.card-grid.layout-wide_panel .forecast-summary{min-height:26px;margin-bottom:8px}.card-grid.layout-wide_panel .forecast-summary-text{font-size:11px;padding:6px 14px}.card-grid.layout-wide_panel .current-icon{width:44px;height:44px}.card-grid.layout-wide_panel .cond-name{font-size:21px}.card-grid.layout-wide_panel .temp-now{font-size:38px}.card-grid.layout-wide_panel .daily-strip{grid-template-columns:repeat(var(--ww-forecast-count,5),minmax(70px,1fr));gap:6px;overflow:hidden}.card-grid.layout-wide_panel .fc-temp{font-size:28px}.card-grid.layout-wide_panel .stats-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.card-grid.layout-wide_panel .right,.card-grid.layout-wide_panel #rmap{height:100%;min-height:0}}
+      @container(max-width:720px){.card-grid.layout-wide_panel .clock-context{grid-template-columns:1fr;gap:6px;margin-bottom:8px}.card-grid.layout-wide_panel .environment-strip{grid-template-columns:1fr;gap:5px}.card-grid.layout-wide_panel .env-tile{grid-template-columns:20px minmax(0,1fr);min-height:40px;padding:5px 7px}.card-grid.layout-wide_panel .env-ico,.card-grid.layout-wide_panel .env-ico svg{width:20px;height:20px}.card-grid.layout-wide_panel .env-lbl,.card-grid.layout-wide_panel .env-note{font-size:9px}.card-grid.layout-wide_panel .env-val{font-size:13px}.card-grid.layout-wide_panel .env-note{display:none}}
       @media(max-width:760px){.card-grid:not(.layout-wide_panel),.card-grid.no-radar:not(.layout-wide_panel){display:flex;flex-direction:column;height:auto;max-height:none}.card-grid:not(.layout-wide_panel) .left{display:contents}.card-grid:not(.layout-wide_panel) .clock-panel{order:1;padding:18px 20px 0}.card-grid:not(.layout-wide_panel) .center{order:var(--ww-ord-weather,20);border-right:0;overflow:visible}.card-grid:not(.layout-wide_panel) .left>.section-title{order:var(--ww-ord-clock-title,12);padding:0 20px}.card-grid:not(.layout-wide_panel) .hourly-left{order:var(--ww-ord-clock-hourly,13);flex:none;overflow:visible;padding:0 20px 16px}.card-grid:not(.layout-wide_panel) .right{order:var(--ww-ord-radar,30)}.clock-time{font-size:48px}.current-row{align-items:flex-start;gap:12px;flex-wrap:wrap}.temp-block{text-align:left}.card-grid:not(.layout-wide_panel) .daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}.right,#rmap{height:300px;min-height:300px}}
       @media(prefers-reduced-motion:reduce){:host([animations]) .ww-sun-rays,:host([animations]) .ww-sun-core,:host([animations]) .ww-cloud,:host([animations]) .ww-rain,:host([animations]) .ww-snow,:host([animations]) .ww-bolt,:host([animations]) .ww-moon,:host([animations]) .ww-moon-glow,:host([animations]) .ww-fog,:host([animations]) .hour-row,:host([animations]) .fc-slot,:host([animations]) .forecast-summary-text{animation:none!important}:host([animations]) .hour-bar-fill{transition:none!important}}
 
@@ -1964,7 +2255,7 @@ class RadarWiseCard extends HTMLElement {
       .card-grid.layout-radar_bottom #rmap{height:340px;min-height:340px}
       .card-grid.ww-force-stack:not(.layout-wide_panel),.card-grid.ww-force-stack.no-radar:not(.layout-wide_panel){display:flex;flex-direction:column;height:auto;max-height:none}.card-grid.ww-force-stack:not(.layout-wide_panel) .left{display:contents}.card-grid.ww-force-stack:not(.layout-wide_panel) .clock-panel{order:1;padding:18px 20px 0}.card-grid.ww-force-stack:not(.layout-wide_panel) .center{order:var(--ww-ord-weather,20);border-right:0;overflow:visible}.card-grid.ww-force-stack:not(.layout-wide_panel) .left>.section-title{order:var(--ww-ord-clock-title,12);padding:0 20px}.card-grid.ww-force-stack:not(.layout-wide_panel) .hourly-left{order:var(--ww-ord-clock-hourly,13);flex:none;overflow:visible;padding:0 20px 16px}.card-grid.ww-force-stack:not(.layout-wide_panel) .right{order:var(--ww-ord-radar,30);height:300px;min-height:300px;border-top:1px solid rgba(255,255,255,0.28);border-radius:0 0 22px 22px}.card-grid.ww-force-stack:not(.layout-wide_panel) #rmap{height:300px;min-height:300px}.card-grid.ww-force-stack:not(.layout-wide_panel) .daily-strip{grid-template-columns:repeat(3,minmax(0,1fr));max-height:none}.card-grid.ww-force-stack:not(.layout-wide_panel) .stats-row{grid-template-columns:repeat(2,minmax(0,1fr))}
       @container(max-width:720px){.card-grid.layout-radar_bottom{grid-template-columns:1fr;grid-template-rows:auto auto 300px}.card-grid.layout-radar_bottom .left{grid-column:1;grid-row:1}.card-grid.layout-radar_bottom .center{grid-column:1;grid-row:2;border-right:0}.card-grid.layout-radar_bottom .right{grid-column:1;grid-row:3;height:300px;min-height:300px}.card-grid.layout-radar_bottom #rmap{height:300px;min-height:300px}}
-      @container(max-width:600px){.clock-time{font-size:58px}.clock-ampm{font-size:17px}.temp-now{font-size:46px}.temp-hilo{font-size:17px;margin-top:5px}.cond-name{font-size:26px}.current-icon{width:54px;height:54px}.current-row{gap:10px;flex-wrap:wrap}.temp-block{min-width:unset}.center{padding:14px 18px}.updated-note{font-size:12px;margin-top:4px}}
+      @container(max-width:600px){.clock-context{grid-template-columns:1fr}.environment-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.clock-time{font-size:58px}.clock-ampm{font-size:17px}.temp-now{font-size:46px}.temp-hilo{font-size:17px;margin-top:5px}.cond-name{font-size:26px}.current-icon{width:54px;height:54px}.current-row{gap:10px;flex-wrap:wrap}.temp-block{min-width:unset}.center{padding:14px 18px}.updated-note{font-size:12px;margin-top:4px}}
       @container(max-width:420px){.clock-time{font-size:48px}.temp-now{font-size:38px}.cond-name{font-size:22px}.current-icon{width:46px;height:46px}}
     `;
   }
@@ -2023,10 +2314,32 @@ class RadarWiseCardEditor extends HTMLElement {
     return this._sensorEntities(isRadarWiseDewPointEntity);
   }
 
+  _airQualityEntities() {
+    return this._sensorEntities(isRadarWiseAirQualityEntity);
+  }
+
+  _pollenEntities(kind = "") {
+    return this._sensorEntities((entityId, state) => isRadarWisePollenEntity(entityId, state, kind));
+  }
+
+  _sensorOptions(sensors, selected) {
+    return sensors.map(([entityId, state]) => {
+      const name = state.attributes?.friendly_name || entityId;
+      return `<option value="${_wwEscape(entityId)}" ${selected === entityId ? "selected" : ""}>${_wwEscape(name)} (${_wwEscape(entityId)})</option>`;
+    }).join("");
+  }
+
+  _configuredSensorOption(entityId, sensors, predicate) {
+    if (!entityId || sensors.some(([candidate]) => candidate === entityId)) return "";
+    return predicate(entityId, this._hass?.states?.[entityId])
+      ? `<option value="${_wwEscape(entityId)}" selected>${_wwEscape(entityId)}</option>`
+      : "";
+  }
+
   _editorEntitySignature() {
     const states = this._hass?.states || {};
     return Object.entries(states)
-      .filter(([entityId, state]) => entityId.startsWith("weather.") || isRadarWiseHumidityEntity(entityId, state) || isRadarWiseTemperatureEntity(entityId, state) || isRadarWiseDewPointEntity(entityId, state))
+      .filter(([entityId, state]) => entityId.startsWith("weather.") || isRadarWiseHumidityEntity(entityId, state) || isRadarWiseTemperatureEntity(entityId, state) || isRadarWiseDewPointEntity(entityId, state) || isRadarWiseAirQualityEntity(entityId, state) || isRadarWisePollenEntity(entityId, state))
       .map(([entityId, state]) => `${entityId}:${state.attributes?.friendly_name || ""}:${state.attributes?.device_class || ""}`)
       .sort()
       .join("|");
@@ -2034,7 +2347,7 @@ class RadarWiseCardEditor extends HTMLElement {
 
   _setValue(key, value) {
     const numberKeys = ["latitude", "longitude", "hourly_count", "forecast_count", "radar_zoom", "radar_speed"];
-    const booleanKeys = ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay", "show_animations", "show_timeline", "show_forecast", "show_forecast_summary", "timeline_autoscroll"];
+    const booleanKeys = ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay", "show_animations", "show_timeline", "show_forecast", "show_forecast_summary", "show_environment", "timeline_autoscroll"];
     let nextValue = value;
     if (numberKeys.includes(key)) nextValue = value === "" ? undefined : Number(value);
     if (booleanKeys.includes(key)) nextValue = Boolean(value);
@@ -2055,6 +2368,12 @@ class RadarWiseCardEditor extends HTMLElement {
     const humiditySensors = this._humidityEntities();
     const temperatureSensors = this._temperatureEntities();
     const dewPointSensors = this._dewPointEntities();
+    const airQualitySensors = this._airQualityEntities();
+    const pollenSensors = this._pollenEntities();
+    const treePollenSensors = this._pollenEntities("tree");
+    const grassPollenSensors = this._pollenEntities("grass");
+    const weedPollenSensors = this._pollenEntities("weed");
+    const moldPollenSensors = this._pollenEntities("mold");
     const hasConfiguredEntity = entities.some(([entityId]) => entityId === config.entity);
     const hasConfiguredHumidityEntity = humiditySensors.some(([entityId]) => entityId === config.humidity_entity);
     const hasConfiguredTemperatureEntity = temperatureSensors.some(([entityId]) => entityId === config.temperature_entity);
@@ -2071,22 +2390,25 @@ class RadarWiseCardEditor extends HTMLElement {
     const configuredDewPointOption = config.dew_point_entity && !hasConfiguredDewPointEntity && isRadarWiseDewPointEntity(config.dew_point_entity, this._hass?.states?.[config.dew_point_entity])
       ? `<option value="${_wwEscape(config.dew_point_entity)}" selected>${_wwEscape(config.dew_point_entity)}</option>`
       : "";
+    const configuredAirQualityOption = this._configuredSensorOption(config.air_quality_entity, airQualitySensors, isRadarWiseAirQualityEntity);
+    const configuredPollenOption = this._configuredSensorOption(config.pollen_entity, pollenSensors, isRadarWisePollenEntity);
+    const configuredTreePollenOption = this._configuredSensorOption(config.tree_pollen_entity, treePollenSensors, (entityId, state) => isRadarWisePollenEntity(entityId, state, "tree"));
+    const configuredGrassPollenOption = this._configuredSensorOption(config.grass_pollen_entity, grassPollenSensors, (entityId, state) => isRadarWisePollenEntity(entityId, state, "grass"));
+    const configuredWeedPollenOption = this._configuredSensorOption(config.weed_pollen_entity, weedPollenSensors, (entityId, state) => isRadarWisePollenEntity(entityId, state, "weed"));
+    const configuredMoldPollenOption = this._configuredSensorOption(config.mold_pollen_entity, moldPollenSensors, (entityId, state) => isRadarWisePollenEntity(entityId, state, "mold"));
     const weatherOptions = entities.map(([entityId, state]) => {
       const name = state.attributes?.friendly_name || entityId;
       return `<option value="${_wwEscape(entityId)}" ${config.entity === entityId ? "selected" : ""}>${_wwEscape(name)} (${_wwEscape(entityId)})</option>`;
     }).join("");
-    const temperatureOptions = temperatureSensors.map(([entityId, state]) => {
-      const name = state.attributes?.friendly_name || entityId;
-      return `<option value="${_wwEscape(entityId)}" ${config.temperature_entity === entityId ? "selected" : ""}>${_wwEscape(name)} (${_wwEscape(entityId)})</option>`;
-    }).join("");
-    const humidityOptions = humiditySensors.map(([entityId, state]) => {
-      const name = state.attributes?.friendly_name || entityId;
-      return `<option value="${_wwEscape(entityId)}" ${config.humidity_entity === entityId ? "selected" : ""}>${_wwEscape(name)} (${_wwEscape(entityId)})</option>`;
-    }).join("");
-    const dewPointOptions = dewPointSensors.map(([entityId, state]) => {
-      const name = state.attributes?.friendly_name || entityId;
-      return `<option value="${_wwEscape(entityId)}" ${config.dew_point_entity === entityId ? "selected" : ""}>${_wwEscape(name)} (${_wwEscape(entityId)})</option>`;
-    }).join("");
+    const temperatureOptions = this._sensorOptions(temperatureSensors, config.temperature_entity);
+    const humidityOptions = this._sensorOptions(humiditySensors, config.humidity_entity);
+    const dewPointOptions = this._sensorOptions(dewPointSensors, config.dew_point_entity);
+    const airQualityOptions = this._sensorOptions(airQualitySensors, config.air_quality_entity);
+    const pollenOptions = this._sensorOptions(pollenSensors, config.pollen_entity);
+    const treePollenOptions = this._sensorOptions(treePollenSensors, config.tree_pollen_entity);
+    const grassPollenOptions = this._sensorOptions(grassPollenSensors, config.grass_pollen_entity);
+    const weedPollenOptions = this._sensorOptions(weedPollenSensors, config.weed_pollen_entity);
+    const moldPollenOptions = this._sensorOptions(moldPollenSensors, config.mold_pollen_entity);
     this.shadowRoot.innerHTML = `
       <style>
         :host{display:block;font-family:var(--ha-font-family-body,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif);color:var(--primary-text-color,#0a1e28)}
@@ -2157,6 +2479,55 @@ class RadarWiseCardEditor extends HTMLElement {
             </select>
           </label>
           <div class="hint">RadarWise reads an existing Home Assistant weather entity and calls Home Assistant's forecast service. Use local temperature, humidity, or dew point sensors when your weather entity differs from the spot you care about.</div>
+        </div>
+        <div class="section">
+          <div class="section-title">Environment sensors</div>
+          <div class="grid">
+            <label>Air quality entity
+              <select id="air_quality_entity">
+                <option value="">None</option>
+                ${configuredAirQualityOption}
+                ${airQualityOptions}
+              </select>
+            </label>
+            <label>Pollen entity
+              <select id="pollen_entity">
+                <option value="">None</option>
+                ${configuredPollenOption}
+                ${pollenOptions}
+              </select>
+            </label>
+            <label>Tree pollen entity
+              <select id="tree_pollen_entity">
+                <option value="">None</option>
+                ${configuredTreePollenOption}
+                ${treePollenOptions}
+              </select>
+            </label>
+            <label>Grass pollen entity
+              <select id="grass_pollen_entity">
+                <option value="">None</option>
+                ${configuredGrassPollenOption}
+                ${grassPollenOptions}
+              </select>
+            </label>
+            <label>Weed pollen entity
+              <select id="weed_pollen_entity">
+                <option value="">None</option>
+                ${configuredWeedPollenOption}
+                ${weedPollenOptions}
+              </select>
+            </label>
+            <label>Mold entity
+              <select id="mold_pollen_entity">
+                <option value="">None</option>
+                ${configuredMoldPollenOption}
+                ${moldPollenOptions}
+              </select>
+            </label>
+          </div>
+          <label class="check" style="margin-top:10px"><input id="show_environment" type="checkbox" ${config.show_environment === false ? "" : "checked"}> Show AQI / pollen beside the clock</label>
+          <div class="hint">These use existing Home Assistant sensors or helpers only. RadarWise does not call any outside AQI or pollen API.</div>
         </div>
         <div class="section">
           <div class="section-title">Region and radar</div>
@@ -2376,10 +2747,10 @@ class RadarWiseCardEditor extends HTMLElement {
         </div>
       </div>
     `;
-    ["entity", "temperature_entity", "humidity_entity", "dew_point_entity", "country", "radar_provider", "radar_style", "radar_basemap", "radar_timeline", "title", "units", "theme_mode", "language", "latitude", "longitude", "hourly_count", "forecast_count", "radar_zoom", "radar_speed"].forEach((id) => {
+    ["entity", "temperature_entity", "humidity_entity", "dew_point_entity", "air_quality_entity", "pollen_entity", "tree_pollen_entity", "grass_pollen_entity", "weed_pollen_entity", "mold_pollen_entity", "country", "radar_provider", "radar_style", "radar_basemap", "radar_timeline", "title", "units", "theme_mode", "language", "latitude", "longitude", "hourly_count", "forecast_count", "radar_zoom", "radar_speed"].forEach((id) => {
       this.shadowRoot.getElementById(id)?.addEventListener("change", (event) => this._setValue(id, event.target.value));
     });
-    ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay", "show_animations", "show_timeline", "show_forecast", "show_forecast_summary", "timeline_autoscroll"].forEach((id) => {
+    ["show_radar", "show_map_controls", "radar_controls", "show_warning_overlay", "show_animations", "show_timeline", "show_forecast", "show_forecast_summary", "show_environment", "timeline_autoscroll"].forEach((id) => {
       this.shadowRoot.getElementById(id)?.addEventListener("change", (event) => this._setValue(id, event.target.checked));
     });
     this.shadowRoot.querySelectorAll(".layout-tile").forEach((tile) => {
