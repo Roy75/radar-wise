@@ -5,7 +5,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/TheWillMiller/radar-wise?label=stars)](https://github.com/TheWillMiller/radar-wise/stargazers)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-yellow?logo=buymeacoffee)](https://buymeacoffee.com/thewillmiller)
 
-**Latest release:** `v0.7.2`
+**Latest release:** `v0.8.0`
 
 RadarWise is a Home Assistant dashboard (Lovelace) custom card for current weather, hourly and daily forecasts, precipitation details, sunrise and sunset, wind, humidity, dew point, UV index, optional AQI/pollen, and optional radar. It follows the TideWise/RiverWise visual language while staying a dashboard card, not a backend integration.
 
@@ -69,6 +69,8 @@ If you are testing from Australia, New Zealand, Europe, or any other region, ple
 - RadarWise built-in theme mode
 - Home Assistant theme-aware mode with `theme_mode: auto`
 - Layout presets: auto, wide panel, stacked, radar bottom, and compact
+- Content focus presets: full dashboard, essentials, forecast only, hourly only, radar only, and custom
+- Density presets for comfortable, slim, or large wall-panel sizing
 - Drag-and-drop panel ordering for clock/timeline, current weather, and radar
 - Adjustable panel widths with a configurable vertical-collapse threshold
 - Optional radar panel
@@ -139,7 +141,7 @@ RadarWise was renamed from its original project name in `v0.5.0`. If Home Assist
 For quick testing before installing locally, you can add this dashboard resource:
 
 ```yaml
-url: https://cdn.jsdelivr.net/gh/TheWillMiller/radar-wise@v0.7.2/radarwise-card.js
+url: https://cdn.jsdelivr.net/gh/TheWillMiller/radar-wise@v0.8.0/radarwise-card.js
 type: module
 ```
 
@@ -294,6 +296,8 @@ Radar location and map controls:
 | `units` | No | `auto` | `auto`, `imperial`, or `metric`. |
 | `language` | No | `auto` | Card display language: `auto`, `en`, `fr`, `es`, `de`, or `pt`. Auto follows Home Assistant/browser language when possible. |
 | `layout` | No | `auto` | `auto`, `wide_panel`, `stacked`, `radar_bottom`, or `compact`. Use `radar_bottom` for a full-width radar below weather content, or `stacked`/`compact` for narrow dashboards. |
+| `content_mode` | No | `full` | Smart content preset: `full`, `essentials`, `forecast`, `timeline`, `radar`, or `custom`. Use `custom` for manual visibility switches. |
+| `density` | No | `comfortable` | Sizing preset: `comfortable`, `slim`, or `large`. Slim makes thinner dashboard rows; large favors wall-panel readability. |
 | `hourly_count` | No | `5` | Number of hourly/forecast-list rows, 1-24. If hourly forecasts are unavailable, RadarWise falls back to twice-daily or daily data. |
 | `forecast_count` | No | `5` | Number of daily/twice-daily forecast cards, 1-7. |
 | `show_forecast_summary` | No | `true` | Show or hide the one-line forecast summary under the date. The text is generated from existing forecast data, localized by `language`, and respects reduced-motion settings. |
@@ -310,7 +314,7 @@ Radar location and map controls:
 | `radar_controls` | No | `true` | Show or hide radar playback controls. |
 | `radar_timeline` | No | `loop` | `loop`, `latest`, or `future`. Future frames are used only when the selected radar provider exposes them. |
 | `radar_style` | No | `standard` | Radar overlay style: `standard`, `vivid`, or `soft`. |
-| `radar_basemap` | No | `light` | Map style: `light`, `dark`, or `osm`. |
+| `radar_basemap` | No | `light` | Map style: `light`, `dark`, or `osm`. The `osm` street-map style uses CARTO-hosted tiles with OpenStreetMap attribution rather than the volunteer `tile.openstreetmap.org` endpoint. |
 | `radar_speed` | No | `700` | Radar loop speed in milliseconds, 300-3000. |
 | `radar_zoom` | No | `7` | Initial radar zoom. |
 | `show_warning_overlay` | No | `true` | Show active US NWS alerts on the radar map when available. |

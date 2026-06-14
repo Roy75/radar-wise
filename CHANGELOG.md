@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.8.0
+
+### Added
+
+- Added smart content focus presets: full dashboard, essentials, forecast only, hourly only, radar only, and custom.
+- Added a Density control with Comfortable, Slim, and Large sizing presets.
+- Added single-panel rendering so forecast-only, hourly-only, and radar-only cards use the full card space cleanly.
+- Added a basemap tile-error fallback so RadarWise can recover if a map tile provider rejects requests.
+
+### Changed
+
+- The Street map basemap now uses CARTO-hosted Voyager tiles with OpenStreetMap attribution instead of calling the volunteer `tile.openstreetmap.org` endpoint directly.
+- Selecting the Full content preset in the visual editor now restores the main clock, forecast, environment, and radar panels.
+- Changing an individual visibility switch in the visual editor now automatically moves the card to Custom content mode.
+
 ## 0.7.2
 
 ### Added
