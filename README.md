@@ -65,7 +65,7 @@ If you are testing from Australia, New Zealand, Europe, or any other region, ple
 - Auto-scroll option for long forecast lists
 - Precipitation probability and amount when exposed by the weather provider
 - Fahrenheit and Celsius support
-- Card language support for Auto, English, French, Spanish, German, and Portuguese
+- Card language support for Auto, English, French, Spanish, German, Portuguese and Dutch
 - RadarWise built-in theme mode
 - Home Assistant theme-aware mode with `theme_mode: auto`
 - Layout presets: auto, wide panel, stacked, radar bottom, and compact
@@ -294,7 +294,7 @@ Radar location and map controls:
 | `radar_provider` | No | `auto` | `auto`, `noaa`, `envcanada`, `rainviewer`, or `none`. |
 | `theme_mode` | No | `radarwise` | `radarwise` or `auto`. |
 | `units` | No | `auto` | `auto`, `imperial`, or `metric`. |
-| `language` | No | `auto` | Card display language: `auto`, `en`, `fr`, `es`, `de`, or `pt`. Auto follows Home Assistant/browser language when possible. |
+| `language` | No | `auto` | Card display language: `auto`, `en`, `fr`, `es`, `de`, `pt` or `nl`. Auto follows Home Assistant/browser language when possible. |
 | `layout` | No | `auto` | `auto`, `wide_panel`, `stacked`, `radar_bottom`, or `compact`. Use `radar_bottom` for a full-width radar below weather content, or `stacked`/`compact` for narrow dashboards. |
 | `content_mode` | No | `full` | Smart content preset: `full`, `essentials`, `forecast`, `timeline`, `radar`, or `custom`. Use `custom` for manual visibility switches. |
 | `density` | No | `comfortable` | Sizing preset: `comfortable`, `slim`, or `large`. Slim makes thinner dashboard rows; large favors wall-panel readability. |
