@@ -76,7 +76,7 @@ const RADARWISE_LANGUAGES = {
   fr: "Français",
   es: "Español",
   de: "Deutsch",
-  pt: "Português"
+  pt: "Português",
   nl: "Nederlands"
 };
 
